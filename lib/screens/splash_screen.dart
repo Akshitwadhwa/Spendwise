@@ -146,12 +146,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                   const SizedBox(height: 8),
                   // Tagline
-                  Text(
+                  const Text(
                     'MASTER YOUR MONEY',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w300,
-                      color: const Color(0xFF94a3b8), // slate-400
+                      color: Color(0xFF94a3b8), // slate-400
                       letterSpacing: 4,
                     ),
                   ),

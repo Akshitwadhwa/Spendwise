@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
+import '../models/category_data.dart';
+import '../screens/add_expense_screen.dart';
 
 class CategoryCard extends StatelessWidget {
   final String title;
@@ -50,7 +52,15 @@ class CategoryCard extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                // Handle category tap
+                final category = CategoryData.categories[title];
+                if (category != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddExpenseScreen(category: category),
+                    ),
+                  );
+                }
               },
               borderRadius: BorderRadius.circular(20),
               child: Padding(
