@@ -198,6 +198,11 @@ class _WalletScreenState extends State<WalletScreen> {
                     icon: Icons.favorite_border,
                     color: AppColors.medicinePink,
                   ),
+                  CategoryCard(
+                    title: 'Lifestyle',
+                    icon: Icons.spa_outlined,
+                    color: AppColors.lifestylePurple,
+                  ),
                 ],
               ),
               const SizedBox(height: 50),

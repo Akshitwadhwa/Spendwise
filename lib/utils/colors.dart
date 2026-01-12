@@ -20,4 +20,5 @@ class AppColors {
   static const Color homeBlue = Color(0xFF5b7db1);
   static const Color collegeOrange = Color(0xFFff8c42);
   static const Color medicinePink = Color(0xFFff6b9d);
+  static const Color lifestylePurple = Color(0xFFa855f7);
 }
