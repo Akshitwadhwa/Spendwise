@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 import '../widgets/category_card.dart';
+import '../widgets/new_category_card.dart';
+import '../models/category_data.dart';
+import 'add_category_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -12,6 +15,28 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   double totalBalance = 0.00;
   int entryCount = 0;
+  
+  // List of custom categories added by user
+  List<CategoryData> customCategories = [];
+
+  void _addCustomCategory(CategoryData category) {
+    setState(() {
+      customCategories.add(category);
+      // Also add to the static map so it can be accessed from CategoryCard
+      CategoryData.categories[category.id] = category;
+    });
+  }
+
+  void _openAddCategoryScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCategoryScreen(
+          onCategoryCreated: _addCustomCategory,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,27 +207,35 @@ class _WalletScreenState extends State<WalletScreen> {
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
                 childAspectRatio: 1.6,
-                children: const [
-                    CategoryCard(
+                children: [
+                    const CategoryCard(
                       title: 'Home',
                       icon: Icons.home_outlined,
                       color: AppColors.homeBlue,
                     ),
-                    CategoryCard(
+                    const CategoryCard(
                       title: 'College',
                       icon: Icons.school_outlined,
                       color: AppColors.collegeOrange,
                     ),
-                  CategoryCard(
+                  const CategoryCard(
                     title: 'Medicine',
                     icon: Icons.favorite_border,
                     color: AppColors.medicinePink,
                   ),
-                  CategoryCard(
+                  const CategoryCard(
                     title: 'Lifestyle',
                     icon: Icons.spa_outlined,
                     color: AppColors.lifestylePurple,
                   ),
+                  // Custom categories
+                  ...customCategories.map((category) => CategoryCard(
+                    title: category.label,
+                    icon: category.icon,
+                    color: category.color,
+                  )),
+                  // New Category button
+                  NewCategoryCard(onTap: _openAddCategoryScreen),
                 ],
               ),
               const SizedBox(height: 50),

@@ -16,7 +16,7 @@ class CategoryData {
     required this.tags,
   });
 
-  static final Map<String, CategoryData> categories = {
+  static Map<String, CategoryData> categories = {
     'Home': const CategoryData(
       id: 'Home',
       label: 'Home',
