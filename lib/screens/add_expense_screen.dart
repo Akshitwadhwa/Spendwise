@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/category_data.dart';
+import '../services/database_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final CategoryData category;
@@ -20,16 +21,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedTag;
   bool _isSubmitting = false;
-  
-  // Store expenses history (in real app, this would come from a database/provider)
-  static final List<Expense> _allExpenses = [];
-
-  List<Expense> get _categoryHistory {
-    return _allExpenses
-        .where((e) => e.category == widget.category.id)
-        .take(5)
-        .toList();
-  }
 
   @override
   void dispose() {
@@ -72,31 +63,31 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_amountController.text.isEmpty) return;
 
     setState(() {
       _isSubmitting = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 400), () {
-      final expense = Expense(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        amount: double.parse(_amountController.text),
-        description: _descriptionController.text.isNotEmpty 
-            ? _descriptionController.text 
-            : widget.category.label,
-        date: DateFormat('dd/MM/yyyy').format(_selectedDate),
-        category: widget.category.id,
-      );
+    final expense = Expense(
+      id: '', // Firebase will generate ID
+      amount: double.parse(_amountController.text),
+      description: _descriptionController.text.isNotEmpty 
+          ? _descriptionController.text 
+          : widget.category.label,
+      date: DateFormat('dd/MM/yyyy').format(_selectedDate),
+      category: widget.category.id,
+    );
 
-      setState(() {
-        _allExpenses.insert(0, expense);
-        _isSubmitting = false;
-        _amountController.clear();
-        _descriptionController.clear();
-        _selectedTag = null;
-      });
+    // Save to Firebase
+    await DatabaseService.addExpense(expense);
+
+    setState(() {
+      _isSubmitting = false;
+      _amountController.clear();
+      _descriptionController.clear();
+      _selectedTag = null;
     });
   }
 
@@ -499,92 +490,101 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // History List
-                  if (_categoryHistory.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
-                          style: BorderStyle.solid,
-                        ),
-                      ),
-                      child: Text(
-                        'No history for ${widget.category.label} yet.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    )
-                  else
-                    ...List.generate(_categoryHistory.length, (index) {
-                      final expense = _categoryHistory[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
+                  // History List from Firebase
+                  StreamBuilder<List<Expense>>(
+                    stream: DatabaseService.getExpensesByCategory(widget.category.id),
+                    builder: (context, snapshot) {
+                      final categoryHistory = snapshot.data ?? [];
+                      
+                      if (categoryHistory.isEmpty) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.05),
+                              style: BorderStyle.solid,
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: widget.category.color.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                widget.category.icon,
-                                size: 18,
-                                color: widget.category.color,
+                          child: Text(
+                            'No history for ${widget.category.label} yet.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      return Column(
+                        children: categoryHistory.map((expense) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.05),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    expense.description,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFFe2e8f0),
-                                    ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: widget.category.color.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    expense.date,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
+                                  child: Icon(
+                                    widget.category.icon,
+                                    size: 18,
+                                    color: widget.category.color,
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        expense.description,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFFe2e8f0),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        expense.date,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '-₹${expense.amount.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              '-₹${expense.amount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        }).toList(),
                       );
-                    }),
+                    },
+                  ),
                   const SizedBox(height: 40),
                 ],
               ),
