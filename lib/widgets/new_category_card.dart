@@ -14,10 +14,10 @@ class NewCategoryCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withOpacity(0.1),
           width: 1,
           style: BorderStyle.solid,
         ),
@@ -26,37 +26,41 @@ class NewCategoryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+          borderRadius: BorderRadius.circular(24),
+          highlightColor: Colors.white.withOpacity(0.05),
+          splashColor: Colors.white.withOpacity(0.1),
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                        style: BorderStyle.solid,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.add,
-                      size: 28,
-                      color: Colors.grey[600],
+                // Icon container - centered
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      style: BorderStyle.solid,
                     ),
                   ),
+                  child: Icon(
+                    Icons.add,
+                    size: 32,
+                    color: Colors.grey[600],
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
+                // Label
                 Text(
                   'New Category',
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: 14,
+                    fontSize: 18,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.5,
                   ),
