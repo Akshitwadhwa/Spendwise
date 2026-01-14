@@ -10,6 +10,9 @@ A beautiful personal finance tracker app built with Flutter.
 - 📊 Multiple spending categories (Home, College, Medicine)
 - 🎨 Beautiful gradient UI
 - 📱 Responsive design
+- 🔥 Firebase backend integration
+- 💾 Cloud Firestore database for data persistence
+- 🔄 Real-time data synchronization
 
 ## Getting Started
 
@@ -32,7 +35,12 @@ A beautiful personal finance tracker app built with Flutter.
    flutter pub get
    ```
 
-4. Run the app:
+4. Configure Firebase:
+   - Add your `google-services.json` to `android/app/`
+   - Add your `GoogleService-Info.plist` to `ios/Runner/`
+   - Firebase configuration is already set up in `lib/firebase_options.dart`
+
+5. Run the app:
    ```bash
    flutter run
    ```
@@ -42,14 +50,38 @@ A beautiful personal finance tracker app built with Flutter.
 ```
 lib/
 ├── main.dart                 # App entry point
+├── firebase_options.dart     # Firebase configuration
+├── models/
+│   └── category_data.dart   # Data models
 ├── screens/
 │   ├── splash_screen.dart   # Splash screen with branding
-│   └── wallet_screen.dart   # Main dashboard/wallet screen
+│   ├── wallet_screen.dart   # Main dashboard/wallet screen
+│   ├── home_screen.dart     # Home screen
+│   ├── add_expense_screen.dart  # Add expense functionality
+│   ├── add_category_screen.dart # Add category functionality
+│   ├── recent_screen.dart   # Recent transactions
+│   └── stats_screen.dart    # Statistics view
+├── services/
+│   └── database_service.dart # Firebase Firestore service
 ├── widgets/
-│   └── category_card.dart   # Reusable category card widget
+│   ├── category_card.dart   # Reusable category card widget
+│   ├── new_category_card.dart # New category card
+│   └── bottom_navbar.dart   # Bottom navigation bar
 └── utils/
     └── colors.dart          # App color palette
 ```
+
+## Backend Integration
+
+### Firebase Services
+- **Cloud Firestore**: NoSQL database for storing expenses and categories
+- **Real-time Updates**: Automatic data synchronization across devices
+- **Database Service**: Centralized service layer for all database operations
+
+### Data Structure
+- Collections for expenses and categories
+- Timestamp-based tracking
+- Category-based expense organization
 
 ## Screenshots
 
