@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../utils/colors.dart';
-import 'wallet_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -58,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const WalletScreen()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }

@@ -256,7 +256,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 50),
+              const SizedBox(height: 120), // Extra space for navbar
               ],
             ),
           ),

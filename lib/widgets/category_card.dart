@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
 import '../models/category_data.dart';
 import '../screens/add_expense_screen.dart';
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
 
 class NewCategoryCard extends StatelessWidget {
   final VoidCallback onTap;
