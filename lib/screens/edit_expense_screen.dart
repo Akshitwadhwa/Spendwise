@@ -3,31 +3,55 @@ import 'package:intl/intl.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
 
-class AddExpenseScreen extends StatefulWidget {
-  final CategoryData category;
+class EditExpenseScreen extends StatefulWidget {
+  final Expense expense;
 
-  const AddExpenseScreen({
+  const EditExpenseScreen({
     super.key,
-    required this.category,
+    required this.expense,
   });
 
   @override
-  State<AddExpenseScreen> createState() => _AddExpenseScreenState();
+  State<EditExpenseScreen> createState() => _EditExpenseScreenState();
 }
 
-class _AddExpenseScreenState extends State<AddExpenseScreen> {
+class _EditExpenseScreenState extends State<EditExpenseScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
+  late String _selectedCategory;
   String? _selectedTag;
   bool _isSubmitting = false;
   String _paymentMethod = 'UPI';
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController.text = widget.expense.amount.toStringAsFixed(0);
+    _descriptionController.text = widget.expense.description;
+    _selectedCategory = widget.expense.category;
+    
+    // Parse date
+    try {
+      _selectedDate = DateFormat('dd/MM/yyyy').parse(widget.expense.date);
+    } catch (e) {
+      try {
+        _selectedDate = DateFormat('dd MMM yyyy').parse(widget.expense.date);
+      } catch (e) {
+        _selectedDate = DateTime.now();
+      }
+    }
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  CategoryData? get _currentCategory {
+    return CategoryData.categories[_selectedCategory];
   }
 
   void _handleTagClick(String tagLabel) {
@@ -64,37 +88,47 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  Future<void> _handleSubmit() async {
+  Future<void> _handleUpdate() async {
     if (_amountController.text.isEmpty) return;
 
     setState(() {
       _isSubmitting = true;
     });
 
-    final expense = Expense(
-      id: '', // Firebase will generate ID
+    final updatedExpense = Expense(
+      id: widget.expense.id,
       amount: double.parse(_amountController.text),
-      description: _descriptionController.text.isNotEmpty 
-          ? _descriptionController.text 
-          : widget.category.label,
+      description: _descriptionController.text.isNotEmpty
+          ? _descriptionController.text
+          : _selectedCategory,
       date: DateFormat('dd/MM/yyyy').format(_selectedDate),
-      category: widget.category.id,
+      category: _selectedCategory,
     );
 
-    // Save to Firebase
-    await DatabaseService.addExpense(expense);
+    await DatabaseService.updateExpense(widget.expense.id, updatedExpense);
 
     setState(() {
       _isSubmitting = false;
-      _amountController.clear();
-      _descriptionController.clear();
-      _selectedTag = null;
     });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Expense updated successfully'),
+          backgroundColor: Color(0xFF10b981),
+        ),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final hasAmount = _amountController.text.isNotEmpty;
+    final category = _currentCategory;
+    final categoryColor = category?.color ?? const Color(0xFF10b981);
+    final categoryIcon = category?.icon ?? Icons.category_outlined;
+    final tags = category?.tags ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0f172a),
@@ -128,7 +162,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: widget.category.color.withOpacity(0.2),
+                          color: categoryColor.withOpacity(0.2),
                           blurRadius: 100,
                           spreadRadius: 50,
                         ),
@@ -160,9 +194,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       ),
                     ),
                     // Title
-                    Text(
-                      widget.category.label,
-                      style: const TextStyle(
+                    const Text(
+                      'Edit Expense',
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -173,15 +207,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: widget.category.color.withOpacity(0.15),
+                        color: categoryColor.withOpacity(0.15),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: Colors.white.withOpacity(0.1),
                         ),
                       ),
                       child: Icon(
-                        widget.category.icon,
-                        color: widget.category.color,
+                        categoryIcon,
+                        color: categoryColor,
                         size: 20,
                       ),
                     ),
@@ -199,13 +233,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  
+
                   // Amount Input Section
                   Center(
                     child: Column(
                       children: [
                         Text(
-                          'ENTER AMOUNT',
+                          'UPDATE AMOUNT',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -223,8 +257,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: hasAmount 
-                                    ? const Color(0xFF10b981) 
+                                color: hasAmount
+                                    ? const Color(0xFF10b981)
                                     : Colors.grey[700],
                               ),
                             ),
@@ -234,7 +268,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                 controller: _amountController,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 textAlign: TextAlign.center,
-                                autofocus: true,
                                 style: const TextStyle(
                                   fontSize: 48,
                                   fontWeight: FontWeight.bold,
@@ -388,67 +421,70 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   const SizedBox(height: 24),
 
                   // Quick Select Tags
-                  Text(
-                    'QUICK SELECT',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[500],
-                      letterSpacing: 1.5,
+                  if (tags.isNotEmpty) ...[
+                    Text(
+                      'QUICK SELECT',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[500],
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: widget.category.tags.map((tag) {
-                      final isSelected = _selectedTag == tag.label;
-                      return GestureDetector(
-                        onTap: () => _handleTagClick(tag.label),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? const Color(0xFF10b981).withOpacity(0.2)
-                                : Colors.white.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected 
-                                  ? const Color(0xFF10b981).withOpacity(0.5)
-                                  : Colors.white.withOpacity(0.1),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: tags.map((tag) {
+                        final isSelected = _selectedTag == tag.label ||
+                            (_selectedTag == null && _descriptionController.text == tag.label);
+                        return GestureDetector(
+                          onTap: () => _handleTagClick(tag.label),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFF10b981).withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF10b981).withOpacity(0.5)
+                                    : Colors.white.withOpacity(0.1),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  tag.icon,
+                                  size: 16,
+                                  color: isSelected
+                                      ? const Color(0xFF10b981)
+                                      : Colors.grey[400],
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  tag.label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: isSelected
+                                        ? const Color(0xFF10b981)
+                                        : Colors.grey[300],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                tag.icon,
-                                size: 16,
-                                color: isSelected 
-                                    ? const Color(0xFF10b981)
-                                    : Colors.grey[400],
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                tag.label,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: isSelected 
-                                      ? const Color(0xFF10b981)
-                                      : Colors.grey[300],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Description Input
                   Container(
@@ -527,9 +563,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Add Expense Button
+                  // Update Expense Button
                   GestureDetector(
-                    onTap: hasAmount && !_isSubmitting ? _handleSubmit : null,
+                    onTap: hasAmount && !_isSubmitting ? _handleUpdate : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: double.infinity,
@@ -563,146 +599,27 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             )
                           else ...[
                             Text(
-                              'Add Expense',
+                              'Update Expense',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: hasAmount ? Colors.white : Colors.grey[600],
-                                letterSpacing: 0.5,
+                                color: hasAmount
+                                    ? Colors.white
+                                    : Colors.grey[600],
                               ),
                             ),
                             const SizedBox(width: 8),
                             Icon(
-                              Icons.check,
-                              color: hasAmount ? Colors.white : Colors.grey[600],
+                              Icons.save_outlined,
+                              color: hasAmount
+                                  ? Colors.white
+                                  : Colors.grey[600],
                               size: 20,
                             ),
                           ],
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // History Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'History',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFe2e8f0),
-                        ),
-                      ),
-                      Text(
-                        'LAST 5',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[600],
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // History List from Firebase
-                  StreamBuilder<List<Expense>>(
-                    stream: DatabaseService.getExpensesByCategory(widget.category.id),
-                    builder: (context, snapshot) {
-                      final categoryHistory = snapshot.data ?? [];
-                      
-                      if (categoryHistory.isEmpty) {
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.05),
-                              style: BorderStyle.solid,
-                            ),
-                          ),
-                          child: Text(
-                            'No history for ${widget.category.label} yet.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        );
-                      }
-                      
-                      return Column(
-                        children: categoryHistory.map((expense) {
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.05),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: widget.category.color.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    widget.category.icon,
-                                    size: 18,
-                                    color: widget.category.color,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        expense.description,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFFe2e8f0),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        expense.date,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  '-₹${expense.amount.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
                   ),
                   const SizedBox(height: 40),
                 ],
