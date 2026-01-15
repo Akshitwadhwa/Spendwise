@@ -9,43 +9,90 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late AnimationController _logoController;
+  late AnimationController _textController;
+  
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _logoRotationAnimation;
+  late Animation<Offset> _logoSlideAnimation;
+  
+  late Animation<double> _textFadeAnimation;
+  late Animation<Offset> _textSlideAnimation;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize animation controller
-    _controller = AnimationController(
+    // Logo animation controller (1 second)
+    _logoController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
-    // Fade animation
-    _fadeAnimation = Tween<double>(
+    // Text animation controller (1 second with delay)
+    _textController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    // Logo animations with custom cubic bezier curve (similar to cubic-bezier(0.16, 1, 0.3, 1))
+    final logosCurve = CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.easeOutCubic,
+    );
+
+    _logoFadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
+    ).animate(logosCurve);
+
+    _logoScaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(logosCurve);
+
+    _logoRotationAnimation = Tween<double>(
+      begin: -0.2, // Roughly -12 degrees in radians
+      end: 0.0,
     ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
+      parent: _logoController,
+      curve: Curves.easeInOutCubic,
     ));
 
-    // Slide animation (translate-y-4 to translate-y-0)
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+    _logoSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5), // translate-y-24
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(logosCurve);
 
-    // Start animation after 100ms
+    // Text animations with delay
+    final textCurve = CurvedAnimation(
+      parent: _textController,
+      curve: Curves.easeOut,
+    );
+
+    _textFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(textCurve);
+
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15), // translate-y-8
+      end: Offset.zero,
+    ).animate(textCurve);
+
+    // Start logo animation after 100ms
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        _controller.forward();
+        _logoController.forward();
+      }
+    });
+
+    // Start text animation after 400ms (300ms delay after logo)
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        _textController.forward();
       }
     });
 
@@ -57,14 +104,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+          transitionDuration: const Duration(milliseconds: 500),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
       );
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _logoController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -78,85 +135,123 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0f172a), // from-[#0f172a]
-              Color(0xFF1e293b), // via-[#1e293b]
-              Color(0xFF0f172a), // to-[#0f172a]
+              Color(0xFF0f172a),
+              Color(0xFF1e293b),
+              Color(0xFF0f172a),
             ],
             stops: [0.0, 0.5, 1.0],
           ),
         ),
         child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Wallet Icon Container
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 1,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo Container with animations
+              AnimatedBuilder(
+                animation: _logoController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _logoFadeAnimation,
+                    child: SlideTransition(
+                      position: _logoSlideAnimation,
+                      child: Transform.scale(
+                        scale: _logoScaleAnimation.value,
+                        child: Transform.rotate(
+                          angle: _logoRotationAnimation.value,
+                          child: Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(32),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 30,
+                                  spreadRadius: 5,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(32),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF34d399).withOpacity(0.5),
+                                        blurRadius: 15,
+                                        spreadRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    size: 80,
+                                    color: Color(0xFF34d399),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: const Icon(
-                          Icons.account_balance_wallet_outlined,
-                          size: 64,
-                          color: Color(0xFF34d399), // emerald-400
-                          weight: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // App Name
-                  const Text(
-                    'SpendWise',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          offset: Offset(0, 4),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Tagline
-                  const Text(
-                    'MASTER YOUR MONEY',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w300,
-                      color: Color(0xFF94a3b8), // slate-400
-                      letterSpacing: 4,
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
+              const SizedBox(height: 32),
+              
+              // Text Container with staggered animation
+              AnimatedBuilder(
+                animation: _textController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _textFadeAnimation,
+                    child: SlideTransition(
+                      position: _textSlideAnimation,
+                      child: Column(
+                        children: [
+                          // App Name
+                          const Text(
+                            'SpendWise',
+                            style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -1,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  offset: Offset(0, 4),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Tagline
+                          Text(
+                            'MASTER YOUR MONEY',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF94a3b8).withOpacity(0.8),
+                              letterSpacing: 4.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
