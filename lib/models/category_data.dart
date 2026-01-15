@@ -47,8 +47,8 @@ class CategoryData {
       icon: Icons.favorite_border,
       color: AppColors.medicinePink,
       tags: [
-        TagOption(label: 'Doctor', icon: Icons.medical_services_outlined),
-        TagOption(label: 'Insulin', icon: Icons.medication_outlined),
+        TagOption(label: 'Novarapid', icon: Icons.medication_outlined),
+        TagOption(label: 'Lantus', icon: Icons.medication_outlined),
         TagOption(label: 'Insurance', icon: Icons.shield_outlined),
         TagOption(label: 'Checkup', icon: Icons.monitor_heart_outlined),
       ],

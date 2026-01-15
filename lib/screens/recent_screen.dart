@@ -154,22 +154,25 @@ class RecentScreen extends StatelessWidget {
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
-                                          Text(
-                                            expense.category,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: color,
-                                              fontWeight: FontWeight.w500,
+                                          Flexible(
+                                            child: Text(
+                                              expense.category,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: color,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           Text(
                                             '•',
                                             style: TextStyle(
                                               color: Colors.grey[600],
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           Text(
                                             expense.date,
                                             style: TextStyle(
