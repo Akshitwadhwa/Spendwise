@@ -3,6 +3,7 @@ import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
 import 'package:intl/intl.dart';
+import 'edit_expense_screen.dart';
 
 class RecentScreen extends StatelessWidget {
   const RecentScreen({super.key});
@@ -268,7 +269,12 @@ class RecentScreen extends StatelessWidget {
               ),
               onTap: () {
                 Navigator.pop(context);
-                _showEditDialog(context, expense);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditExpenseScreen(expense: expense),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 8),
@@ -356,242 +362,6 @@ class RecentScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  static void _showEditDialog(BuildContext context, Expense expense) {
-    final formKey = GlobalKey<FormState>();
-    final amountController = TextEditingController(text: expense.amount.toString());
-    final descriptionController = TextEditingController(text: expense.description);
-    String selectedCategory = expense.category;
-    DateTime selectedDate = DateFormat('dd MMM yyyy').parse(expense.date);
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: const Color(0xFF1e293b),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Edit Transaction',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Amount field
-                  TextFormField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Amount',
-                      labelStyle: TextStyle(color: Colors.grey[400]),
-                      prefixText: '₹ ',
-                      prefixStyle: const TextStyle(color: Colors.white),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF10b981),
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter amount';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Please enter valid amount';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Description field
-                  TextFormField(
-                    controller: descriptionController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      labelStyle: TextStyle(color: Colors.grey[400]),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF10b981),
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter description';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Category dropdown
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    dropdownColor: const Color(0xFF1e293b),
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Category',
-                      labelStyle: TextStyle(color: Colors.grey[400]),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF10b981),
-                        ),
-                      ),
-                    ),
-                    items: CategoryData.categories.keys.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCategory = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Date picker
-                  InkWell(
-                    onTap: () async {
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime.now(),
-                        builder: (context, child) {
-                          return Theme(
-                            data: ThemeData.dark().copyWith(
-                              colorScheme: const ColorScheme.dark(
-                                primary: Color(0xFF10b981),
-                                onPrimary: Colors.white,
-                                surface: Color(0xFF1e293b),
-                                onSurface: Colors.white,
-                              ),
-                            ),
-                            child: child!,
-                          );
-                        },
-                      );
-                      if (pickedDate != null) {
-                        setState(() {
-                          selectedDate = pickedDate;
-                        });
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            color: Colors.grey[400],
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            DateFormat('dd MMM yyyy').format(selectedDate),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  final updatedExpense = Expense(
-                    id: expense.id,
-                    amount: double.parse(amountController.text),
-                    description: descriptionController.text,
-                    date: DateFormat('dd MMM yyyy').format(selectedDate),
-                    category: selectedCategory,
-                  );
-                  DatabaseService.updateExpense(expense.id, updatedExpense);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Transaction updated successfully'),
-                      backgroundColor: Color(0xFF10b981),
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10b981),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Save',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

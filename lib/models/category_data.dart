@@ -24,9 +24,9 @@ class CategoryData {
       color: AppColors.homeBlue,
       tags: [
         TagOption(label: 'Coffee', icon: Icons.coffee),
-        TagOption(label: 'Groceries', icon: Icons.shopping_cart_outlined),
+        TagOption(label: 'Food', icon: Icons.local_restaurant),
         TagOption(label: 'Utilities', icon: Icons.bolt_outlined),
-        TagOption(label: 'Wifi', icon: Icons.wifi),
+        TagOption(label: 'Order', icon: Icons.emoji_food_beverage_outlined),
       ],
     ),
     'College': const CategoryData(
