@@ -59,6 +59,16 @@ class DatabaseService {
             }).toList());
   }
 
+  /// Update an expense
+  static Future<void> updateExpense(String expenseId, Expense expense) async {
+    await _expensesCollection.doc(expenseId).update({
+      'amount': expense.amount,
+      'description': expense.description,
+      'date': expense.date,
+      'category': expense.category,
+    });
+  }
+
   /// Delete an expense
   static Future<void> deleteExpense(String expenseId) async {
     await _expensesCollection.doc(expenseId).delete();

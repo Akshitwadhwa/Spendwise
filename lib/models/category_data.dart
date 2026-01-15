@@ -23,7 +23,7 @@ class CategoryData {
       icon: Icons.home_outlined,
       color: AppColors.homeBlue,
       tags: [
-        TagOption(label: 'Rent', icon: Icons.home_outlined),
+        TagOption(label: 'Coffee', icon: Icons.coffee),
         TagOption(label: 'Groceries', icon: Icons.shopping_cart_outlined),
         TagOption(label: 'Utilities', icon: Icons.bolt_outlined),
         TagOption(label: 'Wifi', icon: Icons.wifi),

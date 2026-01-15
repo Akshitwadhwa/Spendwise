@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
@@ -11,248 +12,358 @@ class StatsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF0f172a),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              const Text(
-                'ANALYTICS',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textGray,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Statistics',
-                style: TextStyle(
-                  fontSize: 28,
-                  color: AppColors.textWhite,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
+        child: StreamBuilder<List<Expense>>(
+          stream: DatabaseService.getExpenses(),
+          builder: (context, snapshot) {
+            final expenses = snapshot.data ?? [];
 
-              // Total Spent Card
-              StreamBuilder<double>(
-                stream: DatabaseService.getTotalBalance(),
-                builder: (context, snapshot) {
-                  final total = snapshot.data ?? 0.0;
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF10b981).withOpacity(0.2),
-                          const Color(0xFF10b981).withOpacity(0.05),
+            // Calculate totals per category
+            final Map<String, double> categoryTotals = {};
+            double grandTotal = 0;
+            for (var expense in expenses) {
+              categoryTotals[expense.category] =
+                  (categoryTotals[expense.category] ?? 0) + expense.amount;
+              grandTotal += expense.amount;
+            }
+
+            final sortedCategories = categoryTotals.entries
+                .map((entry) {
+                  final category = CategoryData.categories[entry.key];
+                  return {
+                    'key': entry.key,
+                    'total': entry.value,
+                    'color': category?.color ?? AppColors.accentTeal,
+                    'icon': category?.icon ?? Icons.category_outlined,
+                    'label': category?.label ?? entry.key,
+                  };
+                })
+                .where((item) => (item['total'] as double) > 0)
+                .toList()
+              ..sort((a, b) =>
+                  (b['total'] as double).compareTo(a['total'] as double));
+
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 100.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with gradient background
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFF1e293b),
+                            const Color(0xFF0f172a).withOpacity(0),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(40),
+                          bottomRight: Radius.circular(40),
+                        ),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Statistics',
+                            style: TextStyle(
+                              fontSize: 32,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Spending breakdown',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[400],
+                              height: 1.2,
+                            ),
+                          ),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFF10b981).withOpacity(0.3),
-                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10b981).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.account_balance_wallet_outlined,
-                                color: Color(0xFF10b981),
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Total Spent',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF94a3b8),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '₹${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-              // Category Breakdown
-              const Text(
-                'SPENDING BY CATEGORY',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textGray,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Category List
-              Expanded(
-                child: StreamBuilder<List<Expense>>(
-                  stream: DatabaseService.getExpenses(),
-                  builder: (context, snapshot) {
-                    final expenses = snapshot.data ?? [];
-
-                    if (expenses.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.pie_chart_outline,
-                              size: 64,
-                              color: Colors.grey[700],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No data to display',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Calculate totals per category
-                    final Map<String, double> categoryTotals = {};
-                    double grandTotal = 0;
-                    for (var expense in expenses) {
-                      categoryTotals[expense.category] = 
-                          (categoryTotals[expense.category] ?? 0) + expense.amount;
-                      grandTotal += expense.amount;
-                    }
-
-                    final sortedCategories = categoryTotals.entries.toList()
-                      ..sort((a, b) => b.value.compareTo(a.value));
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 100),
-                      itemCount: sortedCategories.length,
-                      itemBuilder: (context, index) {
-                        final entry = sortedCategories[index];
-                        final category = CategoryData.categories[entry.key];
-                        final color = category?.color ?? AppColors.accentTeal;
-                        final icon = category?.icon ?? Icons.category_outlined;
-                        final percentage = grandTotal > 0 
-                            ? (entry.value / grandTotal * 100) 
-                            : 0.0;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.05),
-                            ),
-                          ),
-                          child: Column(
+                    // Donut Chart Section
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: SizedBox(
+                          width: 256,
+                          height: 256,
+                          child: Stack(
+                            alignment: Alignment.center,
                             children: [
-                              Row(
+                              // Donut Chart
+                              if (sortedCategories.isNotEmpty)
+                                CustomPaint(
+                                  size: const Size(256, 256),
+                                  painter: DonutChartPainter(
+                                    categories: sortedCategories,
+                                    totalBalance: grandTotal,
+                                  ),
+                                ),
+                              // Center Label
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: color.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      icon,
-                                      size: 20,
-                                      color: color,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          entry.key,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFFe2e8f0),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${percentage.toStringAsFixed(1)}% of total',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
                                   Text(
-                                    '₹${entry.value.toStringAsFixed(2)}',
+                                    'TOTAL',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey[400],
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '₹${_formatCurrency(grandTotal)}',
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 32,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
+                                      height: 1,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
-                              // Progress bar
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: percentage / 100,
-                                  backgroundColor: Colors.white.withOpacity(0.1),
-                                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                                  minHeight: 6,
-                                ),
-                              ),
                             ],
                           ),
-                        );
-                      },
-                    );
-                  },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Details Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.only(left: 12),
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                left: BorderSide(
+                                  color: Color(0xFF10b981),
+                                  width: 4,
+                                ),
+                              ),
+                            ),
+                            child: const Text(
+                              'Details',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Category List
+                          sortedCategories.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.all(32),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.05),
+                                      style: BorderStyle.solid,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'No expenses recorded yet.',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Column(
+                                  children: sortedCategories.map((item) {
+                                    final percentage = grandTotal > 0
+                                        ? ((item['total'] as double) /
+                                                grandTotal *
+                                                100)
+                                            .round()
+                                        : 0;
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.05),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Icon
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: (item['color'] as Color)
+                                                  .withOpacity(0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              item['icon'] as IconData,
+                                              size: 20,
+                                              color: item['color'] as Color,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          // Category name and percentage
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item['label'] as String,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFFe2e8f0),
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      width: 8,
+                                                      height: 8,
+                                                      decoration: BoxDecoration(
+                                                        color: item['color']
+                                                            as Color,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      '$percentage%',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[600],
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Amount
+                                          Text(
+                                            '₹${(item['total'] as double).toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
+  }
+
+  String _formatCurrency(double amount) {
+    if (amount >= 10000000) {
+      return '${(amount / 10000000).toStringAsFixed(1)}Cr';
+    } else if (amount >= 100000) {
+      return '${(amount / 100000).toStringAsFixed(1)}L';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1)}K';
+    } else {
+      return amount.toStringAsFixed(0);
+    }
+  }
+}
+
+// Custom Painter for Donut Chart
+class DonutChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> categories;
+  final double totalBalance;
+
+  DonutChartPainter({
+    required this.categories,
+    required this.totalBalance,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 20;
+    const strokeWidth = 20.0;
+    final gapAngle = categories.length > 1 ? 0.02 : 0.0; // Small gap between segments
+
+    // Draw background circle (empty track)
+    final backgroundPaint = Paint()
+      ..color = const Color(0xFF1e293b)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    // Draw data segments
+    if (totalBalance > 0) {
+      double startAngle = -math.pi / 2; // Start from top
+
+      for (var item in categories) {
+        final percentage = (item['total'] as double) / totalBalance;
+        final sweepAngle = (2 * math.pi * percentage) - gapAngle;
+
+        final paint = Paint()
+          ..color = item['color'] as Color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
+
+        final rect = Rect.fromCircle(center: center, radius: radius);
+        canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
+
+        startAngle += (2 * math.pi * percentage);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(DonutChartPainter oldDelegate) {
+    return oldDelegate.categories != categories ||
+        oldDelegate.totalBalance != totalBalance;
   }
 }
