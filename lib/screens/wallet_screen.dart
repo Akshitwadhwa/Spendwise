@@ -50,7 +50,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'WELCOME BACK',
+                        'WELCOME Akshit',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textGray,
@@ -60,7 +60,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'My Wallet',
+                        'Your Wallet',
                         style: TextStyle(
                           fontSize: 28,
                           color: AppColors.textWhite,
@@ -222,7 +222,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
-                    childAspectRatio: 1.6,
+                    childAspectRatio: 1.0,
                     children: [
                         const CategoryCard(
                           title: 'Home',
@@ -256,7 +256,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 50),
+              const SizedBox(height: 120), // Extra space for navbar
               ],
             ),
           ),

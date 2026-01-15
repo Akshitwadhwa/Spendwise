@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
 import '../models/category_data.dart';
 import '../screens/add_expense_screen.dart';
 
@@ -20,26 +19,34 @@ class CategoryCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withOpacity(0.1),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Stack(
         children: [
-          // Background glow effect - simple diffused glow
+          // Background glow effect
           Positioned(
-            right: -30,
-            top: -30,
+            right: -16,
+            top: -16,
             child: Container(
-              width: 100,
-              height: 100,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.25),
+                    color: color.withOpacity(0.2),
                     blurRadius: 60,
                     spreadRadius: 20,
                   ),
@@ -47,7 +54,7 @@ class CategoryCard extends StatelessWidget {
               ),
             ),
           ),
-          // Main content
+          // Main content - entire area is clickable
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -62,39 +69,51 @@ class CategoryCard extends StatelessWidget {
                   );
                 }
               },
-              borderRadius: BorderRadius.circular(20),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+              borderRadius: BorderRadius.circular(24),
+              highlightColor: Colors.white.withOpacity(0.05),
+              splashColor: Colors.white.withOpacity(0.1),
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          icon,
-                          size: 28,
-                          color: color,
-                        ),
+                    // Icon container - centered
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 32,
+                        color: color,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
+                    // Label
                     Text(
                       title,
                       style: const TextStyle(
                         color: Color(0xFFe2e8f0),
-                        fontSize: 14,
+                        fontSize: 18,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.5,
+                        height: 1.2,
                       ),
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      maxLines: 2,
                     ),
                   ],
                 ),
