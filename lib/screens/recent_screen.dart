@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
-import 'package:intl/intl.dart';
 import 'edit_expense_screen.dart';
 
 class RecentScreen extends StatelessWidget {

@@ -5,6 +5,7 @@ import '../widgets/new_category_card.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
 import 'add_category_screen.dart';
+import 'quick_add_expense_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -291,10 +292,17 @@ class _WalletScreenState extends State<WalletScreen> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const QuickAddExpenseScreen(),
+                            ),
+                          );
+                        },
                         icon: const Icon(
-                          Icons.code,
-                          color: AppColors.textGray,
+                          Icons.auto_awesome,
+                          color: Color(0xFF10b981),
                           size: 24,
                         ),
                       ),
