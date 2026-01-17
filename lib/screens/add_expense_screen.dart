@@ -18,6 +18,7 @@ class AddExpenseScreen extends StatefulWidget {
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _remarksController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   String? _selectedTag;
   bool _isSubmitting = false;
@@ -27,6 +28,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
+    _remarksController.dispose();
     super.dispose();
   }
 
@@ -88,6 +90,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       _isSubmitting = false;
       _amountController.clear();
       _descriptionController.clear();
+      _remarksController.clear();
       _selectedTag = null;
     });
   }
@@ -494,6 +497,51 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   const SizedBox(height: 12),
 
+                  // Remarks Input
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Icon(
+                            Icons.note_outlined,
+                            size: 20,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _remarksController,
+                            maxLines: 3,
+                            minLines: 1,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Additional remarks (optional)',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[600],
+                              ),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   // Date Input
                   GestureDetector(
                     onTap: _selectDate,
@@ -613,7 +661,40 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   StreamBuilder<List<Expense>>(
                     stream: DatabaseService.getExpensesByCategory(widget.category.id),
                     builder: (context, snapshot) {
+                      // Debug logging
+                      if (snapshot.hasError) {
+                        print('Error loading expenses: ${snapshot.error}');
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'Error loading history.\nCheck console for details.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.red[300],
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF10b981),
+                          ),
+                        );
+                      }
+                      
                       final categoryHistory = snapshot.data ?? [];
+                      print('Category ${widget.category.id} has ${categoryHistory.length} expenses');
                       
                       if (categoryHistory.isEmpty) {
                         return Container(

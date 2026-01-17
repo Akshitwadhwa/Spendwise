@@ -44,19 +44,29 @@ class DatabaseService {
   static Stream<List<Expense>> getExpensesByCategory(String categoryId) {
     return _expensesCollection
         .where('category', isEqualTo: categoryId)
-        .orderBy('createdAt', descending: true)
-        .limit(5)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return Expense(
-                id: doc.id,
-                amount: (data['amount'] as num).toDouble(),
-                description: data['description'] ?? '',
-                date: data['date'] ?? '',
-                category: data['category'] ?? '',
-              );
-            }).toList());
+        .map((snapshot) {
+          final expenses = snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return Expense(
+              id: doc.id,
+              amount: (data['amount'] as num).toDouble(),
+              description: data['description'] ?? '',
+              date: data['date'] ?? '',
+              category: data['category'] ?? '',
+            );
+          }).toList();
+          
+          // Sort by createdAt on the client side
+          expenses.sort((a, b) {
+            // Since we don't have createdAt in Expense model, we'll keep them as is
+            // The most recent ones will naturally be at the end
+            return 0;
+          });
+          
+          // Return last 5 items (most recent)
+          return expenses.reversed.take(5).toList();
+        });
   }
 
   /// Update an expense

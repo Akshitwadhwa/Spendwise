@@ -49,7 +49,7 @@ class CategoryData {
       tags: [
         TagOption(label: 'Novarapid', icon: Icons.medication_outlined),
         TagOption(label: 'Lantus', icon: Icons.medication_outlined),
-        TagOption(label: 'Insurance', icon: Icons.shield_outlined),
+        TagOption(label: 'Sensor', icon: Icons.shield_outlined),
         TagOption(label: 'Checkup', icon: Icons.monitor_heart_outlined),
       ],
     ),
@@ -62,7 +62,7 @@ class CategoryData {
         TagOption(label: 'Shopping', icon: Icons.card_giftcard_outlined),
         TagOption(label: 'Movies', icon: Icons.movie_outlined),
         TagOption(label: 'Travel', icon: Icons.flight_outlined),
-        TagOption(label: 'Music', icon: Icons.music_note_outlined),
+        TagOption(label: 'Music', icon: Icons.library_music),
       ],
     ),
   };
