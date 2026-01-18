@@ -16,6 +16,13 @@ class _QuickAddExpenseScreenState extends State<QuickAddExpenseScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Debug: List available models
+    AIService.listAvailableModels();
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -33,13 +40,14 @@ class _QuickAddExpenseScreenState extends State<QuickAddExpenseScreen> {
       final result = await AIService.parseExpense(_controller.text);
 
       if (result != null && mounted) {
+        print("Parsed - Amount: ${result.amount}, Category: ${result.category}, Description: ${result.description}");
+        
         // Check if category exists
         final category = CategoryData.categories[result.category];
         
         if (category != null && result.amount != null) {
           // Navigate to add expense screen with pre-filled data
-          Navigator.pop(context);
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => AddExpenseScreenWithData(
@@ -341,9 +349,10 @@ class AddExpenseScreenWithData extends StatefulWidget {
 class _AddExpenseScreenWithDataState extends State<AddExpenseScreenWithData> {
   @override
   Widget build(BuildContext context) {
-    // We'll use the existing AddExpenseScreen but need to modify it to accept initial data
-    // For now, navigate to regular AddExpenseScreen
-    // You'll need to modify AddExpenseScreen to accept optional parameters
-    return AddExpenseScreen(category: widget.category);
+    return AddExpenseScreen(
+      category: widget.category,
+      initialAmount: widget.amount,
+      initialDescription: widget.description,
+    );
   }
 }

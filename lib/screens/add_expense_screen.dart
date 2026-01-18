@@ -5,10 +5,14 @@ import '../services/database_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final CategoryData category;
+  final double? initialAmount;
+  final String? initialDescription;
 
   const AddExpenseScreen({
     super.key,
     required this.category,
+    this.initialAmount,
+    this.initialDescription,
   });
 
   @override
@@ -23,6 +27,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String? _selectedTag;
   bool _isSubmitting = false;
   String _paymentMethod = 'UPI';
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill amount and description if provided
+    if (widget.initialAmount != null) {
+      _amountController.text = widget.initialAmount!.toStringAsFixed(0);
+    }
+    if (widget.initialDescription != null) {
+      _descriptionController.text = widget.initialDescription!;
+    }
+  }
 
   @override
   void dispose() {
