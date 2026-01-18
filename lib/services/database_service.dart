@@ -84,13 +84,18 @@ class DatabaseService {
     await _expensesCollection.doc(expenseId).delete();
   }
 
-  /// Get total balance (sum of all expenses)
+  /// Get total balance (sum of all expenses, excluding Sensor)
   static Stream<double> getTotalBalance() {
     return _expensesCollection.snapshots().map((snapshot) {
       double total = 0;
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        total += (data['amount'] as num).toDouble();
+        final description = data['description'] as String? ?? '';
+        
+        // Exclude Sensor expenses from total balance
+        if (!description.toLowerCase().contains('sensor')) {
+          total += (data['amount'] as num).toDouble();
+        }
       }
       return total;
     });
