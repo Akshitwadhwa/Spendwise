@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/database_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,6 +13,16 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   File? _profileImage;
+  late Stream<int> _totalEntriesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalEntriesStream = FirebaseFirestore.instance
+        .collection('expenses')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
 
   Future<void> _pickProfileImage() async {
     final picker = ImagePicker();
@@ -27,116 +39,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0f172a),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Profile Photo
-              GestureDetector(
-                onTap: _pickProfileImage,
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey[800],
-                      backgroundImage: _profileImage != null
-                          ? FileImage(_profileImage!)
-                          : const AssetImage('assets/default_profile.png') as ImageProvider,
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              // User Name
-              const Text(
-                'John Doe',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Membership Status
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
-                  border: Border.all(color: Colors.green),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Premium Member',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Stats Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: StreamBuilder<int>(
+        stream: _totalEntriesStream,
+        builder: (context, snapshot) {
+          final totalEntries = snapshot.data ?? 0;
+
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _buildStatCard('Total Entries', '120'),
-                  _buildStatCard('Member Since', '2023'),
+                  // Profile Photo
+                  GestureDetector(
+                    onTap: _pickProfileImage,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.grey[800],
+                          backgroundImage: _profileImage != null
+                              ? FileImage(_profileImage!)
+                              : const AssetImage('assets/default_profile.png') as ImageProvider,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // User Name
+                  const Text(
+                    'John Doe',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Membership Status
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.2),
+                      border: Border.all(color: Colors.green),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Premium Member',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Stats Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatCard('Total Entries', totalEntries.toString()),
+                      _buildStatCard('Logged In Since', '2025'),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Menu Items
+                  _buildMenuItem(
+                    icon: Icons.person,
+                    title: 'Edit Profile',
+                    subtitle: 'Personal details & preferences',
+                    onTap: () {},
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.file_copy,
+                    title: 'Export Weekly Report',
+                    subtitle: 'Download CSV spreadsheet',
+                    onTap: () {},
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.track_changes,
+                    title: 'Spending Goals',
+                    subtitle: 'Set monthly budget limits',
+                    onTap: () {},
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.settings,
+                    title: 'App Settings',
+                    onTap: () {},
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.help_outline,
+                    title: 'Support & FAQ',
+                    onTap: () {},
+                  ),
+                  
                 ],
               ),
-              const SizedBox(height: 24),
-              // Menu Items
-              _buildMenuItem(
-                icon: Icons.person,
-                title: 'Edit Profile',
-                subtitle: 'Personal details & preferences',
-                onTap: () {},
-              ),
-              _buildMenuItem(
-                icon: Icons.file_copy,
-                title: 'Export Weekly Report',
-                subtitle: 'Download CSV spreadsheet',
-                onTap: () {},
-              ),
-              _buildMenuItem(
-                icon: Icons.track_changes,
-                title: 'Spending Goals',
-                subtitle: 'Set monthly budget limits',
-                onTap: () {},
-              ),
-              _buildMenuItem(
-                icon: Icons.settings,
-                title: 'App Settings',
-                onTap: () {},
-              ),
-              _buildMenuItem(
-                icon: Icons.help_outline,
-                title: 'Support & FAQ',
-                onTap: () {},
-              ),
-              _buildMenuItem(
-                icon: Icons.logout,
-                title: 'Log Out',
-                isDestructive: true,
-                onTap: () {},
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
