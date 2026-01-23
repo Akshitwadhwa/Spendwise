@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../utils/colors.dart';
 import '../widgets/category_card.dart';
 import '../widgets/new_category_card.dart';
@@ -6,6 +7,8 @@ import '../models/category_data.dart';
 import '../services/database_service.dart';
 import 'add_category_screen.dart';
 import 'quick_add_expense_screen.dart';
+import 'dart:io';
+import 'profile_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -15,6 +18,8 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
+  File? _profileImage;
+
   void _addCustomCategory(CategoryData category) {
     // Save to Firebase
     DatabaseService.addCategory(category);
@@ -252,6 +257,17 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -296,24 +312,11 @@ class _WalletScreenState extends State<WalletScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const QuickAddExpenseScreen(),
+                              builder: (context) => const ProfileScreen(),
                             ),
                           );
                         },
                         icon: const Icon(
-                          Icons.auto_awesome,
-                          color: Color(0xFF10b981),
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.accentTeal,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
                           Icons.person,
                           color: AppColors.primaryDark,
                           size: 24,
