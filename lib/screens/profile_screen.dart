@@ -62,6 +62,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundImage: _profileImage != null
                               ? FileImage(_profileImage!)
                               : const AssetImage('assets/default_profile.png') as ImageProvider,
+                          onBackgroundImageError: (_, __) {
+                            setState(() {
+                              _profileImage = null;
+                            });
+                          },
                         ),
                         Container(
                           padding: const EdgeInsets.all(6),
