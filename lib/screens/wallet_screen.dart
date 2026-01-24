@@ -6,7 +6,6 @@ import '../widgets/new_category_card.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
 import 'add_category_screen.dart';
-import 'quick_add_expense_screen.dart';
 import 'dart:io';
 import 'profile_screen.dart';
 

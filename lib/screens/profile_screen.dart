@@ -70,7 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         Container(
                           padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.green,
                             shape: BoxShape.circle,
                           ),
