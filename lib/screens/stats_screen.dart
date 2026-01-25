@@ -4,8 +4,16 @@ import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
 
-class StatsScreen extends StatelessWidget {
+
+class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
+
+  @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  String selectedCategory = 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -17,21 +25,25 @@ class StatsScreen extends StatelessWidget {
           builder: (context, snapshot) {
             final expenses = snapshot.data ?? [];
 
-            // Calculate totals per category
-            final Map<String, double> categoryTotals = {};
+            // Group expenses by category
+            final Map<String, List<Expense>> categoryExpenses = {};
             double grandTotal = 0;
             for (var expense in expenses) {
-              categoryTotals[expense.category] =
-                  (categoryTotals[expense.category] ?? 0) + expense.amount;
+              categoryExpenses[expense.category] ??= [];
+              categoryExpenses[expense.category]!.add(expense);
               grandTotal += expense.amount;
             }
 
-            final sortedCategories = categoryTotals.entries
+            final sortedCategories = categoryExpenses.entries
                 .map((entry) {
                   final category = CategoryData.categories[entry.key];
+                  final total = entry.value.fold(0.0, (sum, e) => sum + e.amount);
+                  // Sort expenses by date descending
+                  entry.value.sort((a, b) => b.date.compareTo(a.date));
                   return {
                     'key': entry.key,
-                    'total': entry.value,
+                    'total': total,
+                    'expenses': entry.value,
                     'color': category?.color ?? AppColors.accentTeal,
                     'icon': category?.icon ?? Icons.category_outlined,
                     'label': category?.label ?? entry.key,
@@ -41,6 +53,27 @@ class StatsScreen extends StatelessWidget {
                 .toList()
               ..sort((a, b) =>
                   (b['total'] as double).compareTo(a['total'] as double));
+
+            // Build category chips
+            final allCategories = [
+              'All',
+              ...CategoryData.categories.keys,
+            ];
+
+            // Filtered data
+            List<Map<String, dynamic>> filteredCategories;
+            double filteredTotal;
+            if (selectedCategory == 'All') {
+              filteredCategories = sortedCategories;
+              filteredTotal = grandTotal;
+            } else {
+              filteredCategories = sortedCategories
+                  .where((cat) => cat['key'] == selectedCategory)
+                  .toList();
+              filteredTotal = filteredCategories.isNotEmpty
+                  ? filteredCategories.first['total'] as double
+                  : 0.0;
+            }
 
             return SingleChildScrollView(
               child: Padding(
@@ -69,22 +102,64 @@ class StatsScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Statistics',
-                            style: TextStyle(
-                              fontSize: 32,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Spend Analytics',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_today,
+                                      color: Colors.grey, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'This Month',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Spending breakdown',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[400],
-                              height: 1.2,
+                          const SizedBox(height: 20),
+                          // Category Chips
+                          SizedBox(
+                            height: 40,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: allCategories.length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 10),
+                              itemBuilder: (context, idx) {
+                                final cat = allCategories[idx];
+                                final isSelected = selectedCategory == cat;
+                                return ChoiceChip(
+                                  label: Text(cat,
+                                      style: TextStyle(
+                                        color: isSelected ? Colors.black : Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      )),
+                                  selected: isSelected,
+                                  selectedColor: Colors.white,
+                                  backgroundColor: const Color(0xFF1e293b),
+                                  onSelected: (_) {
+                                    setState(() {
+                                      selectedCategory = cat;
+                                    });
+                                  },
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -103,12 +178,12 @@ class StatsScreen extends StatelessWidget {
                             alignment: Alignment.center,
                             children: [
                               // Donut Chart
-                              if (sortedCategories.isNotEmpty)
+                              if (filteredCategories.isNotEmpty)
                                 CustomPaint(
                                   size: const Size(256, 256),
                                   painter: DonutChartPainter(
-                                    categories: sortedCategories,
-                                    totalBalance: grandTotal,
+                                    categories: filteredCategories,
+                                    totalBalance: filteredTotal,
                                   ),
                                 ),
                               // Center Label
@@ -116,7 +191,7 @@ class StatsScreen extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'TOTAL',
+                                    selectedCategory == 'All' ? 'TOTAL' : selectedCategory.toUpperCase(),
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: Colors.grey[400],
@@ -126,7 +201,7 @@ class StatsScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '₹${_formatCurrency(grandTotal)}',
+                                    '₹${_formatCurrency(filteredTotal)}',
                                     style: const TextStyle(
                                       fontSize: 32,
                                       fontWeight: FontWeight.bold,
@@ -171,7 +246,7 @@ class StatsScreen extends StatelessWidget {
                           const SizedBox(height: 16),
 
                           // Category List
-                          sortedCategories.isEmpty
+                          filteredCategories.isEmpty
                               ? Container(
                                   padding: const EdgeInsets.all(32),
                                   decoration: BoxDecoration(
@@ -194,17 +269,17 @@ class StatsScreen extends StatelessWidget {
                                   ),
                                 )
                               : Column(
-                                  children: sortedCategories.map((item) {
-                                    final percentage = grandTotal > 0
+                                  children: filteredCategories.map((item) {
+                                    final percentage = filteredTotal > 0
                                         ? ((item['total'] as double) /
-                                                grandTotal *
+                                                filteredTotal *
                                                 100)
                                             .round()
                                         : 0;
+                                    final expenses = item['expenses'] as List<Expense>;
 
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         color: Colors.white.withOpacity(0.05),
                                         borderRadius: BorderRadius.circular(16),
@@ -212,77 +287,127 @@ class StatsScreen extends StatelessWidget {
                                           color: Colors.white.withOpacity(0.05),
                                         ),
                                       ),
-                                      child: Row(
-                                        children: [
-                                          // Icon
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
+                                      child: ExpansionTile(
+                                        title: Row(
+                                          children: [
+                                            // Icon
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: (item['color'] as Color)
+                                                    .withOpacity(0.15),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Icon(
+                                                item['icon'] as IconData,
+                                                size: 20,
+                                                color: item['color'] as Color,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            // Category name and percentage
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item['label'] as String,
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Color(0xFFe2e8f0),
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 8,
+                                                        height: 8,
+                                                        decoration: BoxDecoration(
+                                                          color: item['color']
+                                                              as Color,
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        '$percentage%',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey[600],
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            // Amount
+                                            Text(
+                                              '₹${(item['total'] as double).toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        children: expenses.map((expense) {
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                             decoration: BoxDecoration(
-                                              color: (item['color'] as Color)
-                                                  .withOpacity(0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
+                                              border: Border(
+                                                top: BorderSide(
+                                                  color: Colors.white.withOpacity(0.05),
+                                                  width: 1,
+                                                ),
+                                              ),
                                             ),
-                                            child: Icon(
-                                              item['icon'] as IconData,
-                                              size: 20,
-                                              color: item['color'] as Color,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          // Category name and percentage
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                            child: Row(
                                               children: [
-                                                Text(
-                                                  item['label'] as String,
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFFe2e8f0),
-                                                    letterSpacing: 0.5,
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        expense.description,
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.white,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        expense.date,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey[400],
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                                const SizedBox(height: 4),
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                      width: 8,
-                                                      height: 8,
-                                                      decoration: BoxDecoration(
-                                                        color: item['color']
-                                                            as Color,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      '$percentage%',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey[600],
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
+                                                Text(
+                                                  '₹${expense.amount.toStringAsFixed(0)}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                          // Amount
-                                          Text(
-                                            '₹${(item['total'] as double).toStringAsFixed(0)}',
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        ],
+                                          );
+                                        }).toList(),
                                       ),
                                     );
                                   }).toList(),

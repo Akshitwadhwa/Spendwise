@@ -121,7 +121,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     child: Column(
                       children: [
                         Text(
-                          'Total Spent',
+                          'Total Spending',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[400],

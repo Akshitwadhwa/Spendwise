@@ -86,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 16),
                   // User Name
                   const Text(
-                    'John Doe',
+                    'Akshit Wadhwa',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24,

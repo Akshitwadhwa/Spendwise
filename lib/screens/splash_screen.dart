@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     _logoFadeAnimation = Tween<double>(
       begin: 0.0,
-      end: 1.0,
+      end: 2.0,
     ).animate(logosCurve);
 
     _logoScaleAnimation = Tween<double>(
@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     ).animate(logosCurve);
 
     _logoRotationAnimation = Tween<double>(
-      begin: -0.2, // Roughly -12 degrees in radians
+      begin: -0.3, // -17 degrees in radians
       end: 0.0,
     ).animate(CurvedAnimation(
       parent: _logoController,
@@ -237,7 +237,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           const SizedBox(height: 12),
                           // Tagline
                           Text(
-                            'MASTER YOUR MONEY',
+                            'Your data your hand',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
