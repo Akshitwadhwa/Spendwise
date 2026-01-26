@@ -22,28 +22,11 @@ A beautiful personal finance tracker app built with Flutter.
 - Dart SDK
 - Android Studio / Xcode (for mobile development)
 
-### Installation
+# Configure Firebase:
+- Add your `google-services.json` to `android/app/`
+- Add your `GoogleService-Info.plist` to `ios/Runner/`
+- Firebase configuration is already set up in `lib/firebase_options.dart`
 
-1. Clone this repository
-2. Navigate to the project directory:
-   ```bash
-   cd Spendwise
-   ```
-
-3. Get dependencies:
-   ```bash
-   flutter pub get
-   ```
-
-4. Configure Firebase:
-   - Add your `google-services.json` to `android/app/`
-   - Add your `GoogleService-Info.plist` to `ios/Runner/`
-   - Firebase configuration is already set up in `lib/firebase_options.dart`
-
-5. Run the app:
-   ```bash
-   flutter run
-   ```
 
 ## Project Structure
 
@@ -82,6 +65,17 @@ lib/
 - Collections for expenses and categories
 - Timestamp-based tracking
 - Category-based expense organization
+
+
+## Pie Chart Visualization
+
+SpendWise features a dynamic pie chart to help you visualize your spending distribution across categories. The pie chart appears on the Statistics screen and provides an at-a-glance breakdown of your expenses, making it easy to identify where most of your money goes.
+
+- 📊 **Category Breakdown:** Each slice represents a spending category (e.g., Home, College, Medicine, Lifestyle).
+- 🎨 **Color Coded:** Slices are color-coded to match category cards for intuitive recognition.
+- 🔄 **Real-Time Updates:** The chart updates automatically as you add or edit expenses.
+
+This visual tool empowers you to make informed financial decisions and track your budgeting goals more effectively.
 
 ## Screenshots
 
