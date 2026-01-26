@@ -60,7 +60,7 @@ class CategoryData {
       color: AppColors.lifestylePurple,
       tags: [
         TagOption(label: 'Shopping', icon: Icons.card_giftcard_outlined),
-        TagOption(label: 'Movies', icon: Icons.movie_outlined),
+        TagOption(label: 'Auto Renew', icon: Icons.movie_outlined),
         TagOption(label: 'Travel', icon: Icons.flight_outlined),
         TagOption(label: 'Music', icon: Icons.library_music),
       ],
