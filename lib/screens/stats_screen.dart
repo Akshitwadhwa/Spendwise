@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
@@ -14,6 +15,94 @@ class StatsScreen extends StatefulWidget {
 
 class _StatsScreenState extends State<StatsScreen> {
   String selectedCategory = 'All';
+  String _selectedDateFilter = 'This Month';
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedDateFilter == label;
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      child: FilterChip(
+        label: Text(
+          _getShortLabel(label),
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+        selected: isSelected,
+        onSelected: (selected) {
+          if (selected) {
+            setState(() {
+              _selectedDateFilter = label;
+            });
+          }
+        },
+        backgroundColor: const Color(0xFF1e293b),
+        selectedColor: const Color(0xFF10b981),
+        checkmarkColor: Colors.white,
+        avatar: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+        elevation: isSelected ? 2 : 0,
+        shadowColor: isSelected ? const Color(0xFF10b981).withOpacity(0.3) : null,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(25),
+          side: BorderSide(
+            color: isSelected ? const Color(0xFF10b981) : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    );
+  }
+
+  String _getShortLabel(String label) {
+    switch (label) {
+      case 'Last 7 days':
+        return '7 Days';
+      case 'Last 10 days':
+        return '10 Days';
+      case 'Last month':
+        return 'Last Month';
+      default:
+        return label;
+    }
+  }
+
+  List<Expense> _filterExpensesByDate(List<Expense> expenses) {
+    if (_selectedDateFilter == 'All') {
+      return expenses;
+    }
+
+    final now = DateTime.now();
+    DateTime startDate;
+
+    switch (_selectedDateFilter) {
+      case 'Last 7 days':
+        startDate = now.subtract(const Duration(days: 7));
+        break;
+      case 'Last 10 days':
+        startDate = now.subtract(const Duration(days: 10));
+        break;
+      case 'This Month':
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case 'Last month':
+        startDate = DateTime(now.year, now.month - 1, 1);
+        break;
+      default:
+        return expenses;
+    }
+
+    return expenses.where((expense) {
+      try {
+        final expenseDate = DateFormat('dd/MM/yyyy').parse(expense.date);
+        return expenseDate.isAfter(startDate) || expenseDate.isAtSameMomentAs(startDate);
+      } catch (e) {
+        return true; // Include if date parsing fails
+      }
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,12 +112,13 @@ class _StatsScreenState extends State<StatsScreen> {
         child: StreamBuilder<List<Expense>>(
           stream: DatabaseService.getExpenses(),
           builder: (context, snapshot) {
-            final expenses = snapshot.data ?? [];
+            final allExpenses = snapshot.data ?? [];
+            final filteredExpenses = _filterExpensesByDate(allExpenses);
 
             // Group expenses by category
             final Map<String, List<Expense>> categoryExpenses = {};
             double grandTotal = 0;
-            for (var expense in expenses) {
+            for (var expense in filteredExpenses) {
               categoryExpenses[expense.category] ??= [];
               categoryExpenses[expense.category]!.add(expense);
               grandTotal += expense.amount;
@@ -103,29 +193,25 @@ class _StatsScreenState extends State<StatsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Spend Analytics',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
+                              Expanded(
+                                child: const Text(
+                                  'Spend Analytics',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.2,
+                                  ),
                                 ),
                               ),
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_today,
-                                      color: Colors.grey, size: 18),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'This Month',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[400],
-                                    ),
-                                  ),
+                                  _buildFilterChip('All'),
+                                  _buildFilterChip('Last 7 days'),
+                                  _buildFilterChip('Last 10 days'),
+                                  _buildFilterChip('This Month'),
+                                  _buildFilterChip('Last month'),
                                 ],
                               ),
                             ],

@@ -1,11 +1,103 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
 import 'edit_expense_screen.dart';
 
-class RecentScreen extends StatelessWidget {
+class RecentScreen extends StatefulWidget {
   const RecentScreen({super.key});
+
+  @override
+  State<RecentScreen> createState() => _RecentScreenState();
+}
+
+class _RecentScreenState extends State<RecentScreen> {
+  String _selectedDateFilter = 'All';
+
+  List<Expense> _filterExpensesByDate(List<Expense> expenses) {
+    if (_selectedDateFilter == 'All') {
+      return expenses;
+    }
+
+    final now = DateTime.now();
+    DateTime startDate;
+
+    switch (_selectedDateFilter) {
+      case 'Last 7 days':
+        startDate = now.subtract(const Duration(days: 7));
+        break;
+      case 'Last 10 days':
+        startDate = now.subtract(const Duration(days: 10));
+        break;
+      case 'Last month':
+        startDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      default:
+        return expenses;
+    }
+
+    return expenses.where((expense) {
+      try {
+        final expenseDate = DateFormat('dd/MM/yyyy').parse(expense.date);
+        return expenseDate.isAfter(startDate) || expenseDate.isAtSameMomentAs(startDate);
+      } catch (e) {
+        return true; // Include if date parsing fails
+      }
+    }).toList();
+  }
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedDateFilter == label;
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(
+          _getShortLabel(label),
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+        selected: isSelected,
+        onSelected: (selected) {
+          if (selected) {
+            setState(() {
+              _selectedDateFilter = label;
+            });
+          }
+        },
+        backgroundColor: const Color(0xFF1e293b),
+        selectedColor: const Color(0xFF10b981),
+        checkmarkColor: Colors.white,
+        avatar: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+        elevation: isSelected ? 2 : 0,
+        shadowColor: isSelected ? const Color(0xFF10b981).withOpacity(0.3) : null,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(25),
+          side: BorderSide(
+            color: isSelected ? const Color(0xFF10b981) : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    );
+  }
+
+  String _getShortLabel(String label) {
+    switch (label) {
+      case 'Last 7 days':
+        return '7 Days';
+      case 'Last 10 days':
+        return '10 Days';
+      case 'Last month':
+        return 'Last Month';
+      default:
+        return label;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +128,23 @@ class RecentScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // Date Filter
+              Container(
+                height: 50,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  children: [
+                    _buildFilterChip('All'),
+                    _buildFilterChip('Last 7 days'),
+                    _buildFilterChip('Last 10 days'),
+                    _buildFilterChip('Last month'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Transactions List
               Expanded(
@@ -51,9 +159,10 @@ class RecentScreen extends StatelessWidget {
                       );
                     }
 
-                    final expenses = snapshot.data ?? [];
+                    final allExpenses = snapshot.data ?? [];
+                    final filteredExpenses = _filterExpensesByDate(allExpenses);
 
-                    if (expenses.isEmpty) {
+                    if (filteredExpenses.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -87,9 +196,9 @@ class RecentScreen extends StatelessWidget {
 
                     return ListView.builder(
                       padding: const EdgeInsets.only(bottom: 100),
-                      itemCount: expenses.length,
+                      itemCount: filteredExpenses.length,
                       itemBuilder: (context, index) {
-                        final expense = expenses[index];
+                        final expense = filteredExpenses[index];
                         final category = CategoryData.categories[expense.category];
                         final color = category?.color ?? AppColors.accentTeal;
                         final icon = category?.icon ?? Icons.category_outlined;
