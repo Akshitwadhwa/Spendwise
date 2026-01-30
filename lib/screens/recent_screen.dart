@@ -294,30 +294,36 @@ class _RecentScreenState extends State<RecentScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  '-₹${expense.amount.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                // Settings button
-                                GestureDetector(
-                                  onTap: () => _showOptionsBottomSheet(context, expense),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(8),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '-₹${expense.amount.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    child: Icon(
-                                      Icons.more_vert,
-                                      size: 18,
-                                      color: Colors.grey[400],
+                                    const SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: () => _showOptionsBottomSheet(context, expense),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.05),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          Icons.more_vert,
+                                          size: 18,
+                                          color: Colors.grey[400],
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ],
                             ),

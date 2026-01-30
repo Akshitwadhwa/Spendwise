@@ -205,14 +205,17 @@ class _StatsScreenState extends State<StatsScreen> {
                                   ),
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  _buildFilterChip('All'),
-                                  _buildFilterChip('Last 7 days'),
-                                  _buildFilterChip('Last 10 days'),
-                                  _buildFilterChip('This Month'),
-                                  _buildFilterChip('Last month'),
-                                ],
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _buildFilterChip('All'),
+                                    _buildFilterChip('Last 7 days'),
+                                    _buildFilterChip('Last 10 days'),
+                                    _buildFilterChip('This Month'),
+                                    _buildFilterChip('Last month'),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -406,6 +409,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                                       color: Color(0xFFe2e8f0),
                                                       letterSpacing: 0.5,
                                                     ),
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Row(
@@ -435,13 +439,17 @@ class _StatsScreenState extends State<StatsScreen> {
                                               ),
                                             ),
                                             // Amount
-                                            Text(
-                                              '₹${(item['total'] as double).toStringAsFixed(0)}',
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 0.5,
+                                            Flexible(
+                                              child: Text(
+                                                '₹${(item['total'] as double).toStringAsFixed(0)}',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
                                           ],
