@@ -194,8 +194,8 @@ class _StatsScreenState extends State<StatsScreen> {
                         children: [
                           Row(
                             children: [
-                              Expanded(
-                                child: const Text(
+                              const Expanded(
+                                child: Text(
                                   'Spend Analytics',
                                   style: TextStyle(
                                     fontSize: 28,

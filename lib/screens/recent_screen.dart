@@ -131,7 +131,7 @@ class _RecentScreenState extends State<RecentScreen> {
               const SizedBox(height: 16),
 
               // Date Filter
-              Container(
+              SizedBox(
                 height: 50,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
