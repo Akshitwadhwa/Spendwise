@@ -6,12 +6,14 @@ class CategoryCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color color;
+  final double? amount;
 
   const CategoryCard({
     super.key,
     required this.title,
     required this.icon,
     required this.color,
+    this.amount,
   });
 
   @override
@@ -75,14 +77,14 @@ class CategoryCard extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 height: double.infinity,
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Icon container - centered
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(16),
@@ -96,25 +98,37 @@ class CategoryCard extends StatelessWidget {
                       ),
                       child: Icon(
                         icon,
-                        size: 32,
+                        size: 28,
                         color: color,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     // Label
                     Text(
                       title,
                       style: const TextStyle(
                         color: Color(0xFFe2e8f0),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
                         height: 1.2,
                       ),
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
+                      maxLines: 1,
                     ),
+                    if (amount != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '₹${amount!.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          color: color.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ],
                 ),
               ),

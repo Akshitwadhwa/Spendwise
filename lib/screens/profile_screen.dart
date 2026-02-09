@@ -1,7 +1,8 @@
-import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,156 +12,218 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  File? _profileImage;
-  late Stream<int> _totalEntriesStream;
+  bool _isMigrating = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _totalEntriesStream = FirebaseFirestore.instance
-        .collection('expenses')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+  String _formatJoinedDate(User user) {
+    final joinedAt = user.metadata.creationTime;
+    if (joinedAt == null) return '-';
+    return DateFormat('dd MMM yyyy').format(joinedAt);
   }
 
-  Future<void> _pickProfileImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  Future<void> _signOut() async {
+    await AuthService.signOut();
 
-    if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
+    if (mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
+  Future<void> _runLegacyMigration() async {
+    final shouldMigrate = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1e293b),
+          title: const Text(
+            'Migrate Old Data?',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'This will copy old global data into your account. Existing user data will stay unchanged.',
+            style: TextStyle(color: Color(0xFF94a3b8)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Migrate',
+                style: TextStyle(color: Color(0xFF10b981)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldMigrate != true || !mounted) return;
+
+    setState(() {
+      _isMigrating = true;
+    });
+
+    try {
+      final result = await DatabaseService.migrateLegacyDataToCurrentUser();
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF10b981),
+          content: Text(
+            'Migrated ${result.migratedExpenses} expenses, ${result.migratedCategories} categories. '
+            'Skipped ${result.skippedExpenses + result.skippedCategories} existing docs.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Migration failed: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isMigrating = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0f172a),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0f172a),
+          elevation: 0,
+          title: const Text('Profile'),
+        ),
+        body: const Center(
+          child: Text(
+            'No user signed in',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    final displayName = user.displayName?.trim().isNotEmpty == true
+        ? user.displayName!.trim()
+        : 'SpendWise User';
+
     return Scaffold(
       backgroundColor: const Color(0xFF0f172a),
-      body: StreamBuilder<int>(
-        stream: _totalEntriesStream,
-        builder: (context, snapshot) {
-          final totalEntries = snapshot.data ?? 0;
-
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Profile Photo
-                  GestureDetector(
-                    onTap: _pickProfileImage,
-                    child: Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundColor: Colors.grey[800],
-                          backgroundImage: _profileImage != null
-                              ? FileImage(_profileImage!)
-                              : const AssetImage('assets/default_profile.png') as ImageProvider,
-                          onBackgroundImageError: (_, __) {
-                            setState(() {
-                              _profileImage = null;
-                            });
-                          },
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ],
-                    ),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0f172a),
+        elevation: 0,
+        title: const Text('Profile'),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 52,
+                backgroundColor: Colors.grey[800],
+                backgroundImage:
+                    user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+                child: user.photoURL == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 48,
+                        color: Colors.white70,
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                displayName,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                user.email ?? 'No email',
+                style: const TextStyle(
+                  color: Color(0xFF94a3b8),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  border: Border.all(color: Colors.green),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Google Account',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 16),
-                  // User Name
-                  const Text(
-                    'Akshit Wadhwa',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Membership Status
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
-                      border: Border.all(color: Colors.green),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Premium Member',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Stats Row
-                  Row(
+                ),
+              ),
+              const SizedBox(height: 22),
+              StreamBuilder<int>(
+                stream: DatabaseService.getEntryCount(),
+                builder: (context, snapshot) {
+                  final totalEntries = snapshot.data ?? 0;
+                  return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildStatCard('Total Entries', totalEntries.toString()),
-                      _buildStatCard('Logged In Since', '2025'),
+                      _buildStatCard('Joined', _formatJoinedDate(user)),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Menu Items
-                  _buildMenuItem(
-                    icon: Icons.person,
-                    title: 'Edit Profile',
-                    subtitle: 'Personal details & preferences',
-                    onTap: () {},
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.file_copy,
-                    title: 'Export Weekly Report',
-                    subtitle: 'Download CSV spreadsheet',
-                    onTap: () {},
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.track_changes,
-                    title: 'Spending Goals',
-                    subtitle: 'Set monthly budget limits',
-                    onTap: () {},
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.settings,
-                    title: 'App Settings',
-                    onTap: () {},
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.help_outline,
-                    title: 'Support & FAQ',
-                    onTap: () {},
-                  ),
-                  
-                ],
+                  );
+                },
               ),
-            ),
-          );
-        },
+              const SizedBox(height: 24),
+              _buildMenuItem(
+                icon: Icons.badge_outlined,
+                title: 'UID',
+                subtitle: user.uid,
+              ),
+              _buildMenuItem(
+                icon: _isMigrating ? Icons.hourglass_top : Icons.sync_alt,
+                title: _isMigrating ? 'Migrating...' : 'Migrate Legacy Data',
+                subtitle: 'Copy old global data into this account',
+                onTap: _isMigrating ? null : _runLegacyMigration,
+              ),
+              _buildMenuItem(
+                icon: Icons.logout,
+                title: 'Sign Out',
+                subtitle: 'Log out from this device',
+                isDestructive: true,
+                onTap: _signOut,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildStatCard(String title, String value) {
     return Container(
+      width: 155,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[900],
@@ -180,9 +243,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           Text(
             value,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -215,12 +279,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? Text(
               subtitle,
               style: const TextStyle(color: Colors.grey),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             )
           : null,
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: Colors.grey,
-      ),
+      trailing: isDestructive
+          ? null
+          : const Icon(
+              Icons.chevron_right,
+              color: Colors.grey,
+            ),
     );
   }
 }

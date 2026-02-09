@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/splash_screen.dart';
+import 'screens/auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +32,7 @@ class SpendWiseApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF1a1f3a),
         fontFamily: 'Roboto',
       ),
-      home: const SplashScreen(),
+      home: const AuthGate(),
     );
   }
 }

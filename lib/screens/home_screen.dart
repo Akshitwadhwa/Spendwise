@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _getScreen() {
     switch (_activeTab) {
       case TabType.home:
-        return const WalletScreen();
+        return WalletScreen(onTabChange: _onTabChange);
       case TabType.recent:
         return const RecentScreen();
       case TabType.stats:
