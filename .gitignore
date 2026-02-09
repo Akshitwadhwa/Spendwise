@@ -45,3 +45,4 @@ app.*.map.json
 
 # API Keys and sensitive files
 lib/services/ai_service.dart
+android/app/google-services.json
