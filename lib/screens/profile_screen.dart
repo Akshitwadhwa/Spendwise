@@ -12,6 +12,16 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  String _maskUid(String uid) {
+    if (uid.length <= 8) {
+      return '*' * uid.length;
+    }
+    final start = uid.substring(0, 4);
+    final end = uid.substring(uid.length - 4);
+    final middle = '*' * (uid.length - 8);
+    return '$start$middle$end';
+  }
+
   String _formatJoinedDate(User user) {
     final joinedAt = user.metadata.creationTime;
     if (joinedAt == null) return '-';
@@ -140,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildMenuItem(
                 icon: Icons.badge_outlined,
                 title: 'UID',
-                subtitle: user.uid,
+                subtitle: _maskUid(user.uid),
               ),
               _buildMenuItem(
                 icon: Icons.logout,
