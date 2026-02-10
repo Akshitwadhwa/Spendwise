@@ -12,12 +12,19 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isMigrating = false;
-
   String _formatJoinedDate(User user) {
     final joinedAt = user.metadata.creationTime;
     if (joinedAt == null) return '-';
     return DateFormat('dd MMM yyyy').format(joinedAt);
+  }
+
+  String _accountTypeLabel(User user) {
+    final providerIds =
+        user.providerData.map((provider) => provider.providerId).toSet();
+
+    if (providerIds.contains('google.com')) return 'Google Account';
+    if (providerIds.contains('password')) return 'Password Account';
+    return 'SpendWise Account';
   }
 
   Future<void> _signOut() async {
@@ -25,73 +32,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
-    }
-  }
-
-  Future<void> _runLegacyMigration() async {
-    final shouldMigrate = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1e293b),
-          title: const Text(
-            'Migrate Old Data?',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: const Text(
-            'This will copy old global data into your account. Existing user data will stay unchanged.',
-            style: TextStyle(color: Color(0xFF94a3b8)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text(
-                'Migrate',
-                style: TextStyle(color: Color(0xFF10b981)),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldMigrate != true || !mounted) return;
-
-    setState(() {
-      _isMigrating = true;
-    });
-
-    try {
-      final result = await DatabaseService.migrateLegacyDataToCurrentUser();
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF10b981),
-          content: Text(
-            'Migrated ${result.migratedExpenses} expenses, ${result.migratedCategories} categories. '
-            'Skipped ${result.skippedExpenses + result.skippedCategories} existing docs.',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red,
-          content: Text('Migration failed: $e'),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isMigrating = false;
-        });
-      }
     }
   }
 
@@ -166,15 +106,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.2),
                   border: Border.all(color: Colors.green),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Google Account',
-                  style: TextStyle(
+                child: Text(
+                  _accountTypeLabel(user),
+                  style: const TextStyle(
                     color: Colors.green,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -200,12 +141,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.badge_outlined,
                 title: 'UID',
                 subtitle: user.uid,
-              ),
-              _buildMenuItem(
-                icon: _isMigrating ? Icons.hourglass_top : Icons.sync_alt,
-                title: _isMigrating ? 'Migrating...' : 'Migrate Legacy Data',
-                subtitle: 'Copy old global data into this account',
-                onTap: _isMigrating ? null : _runLegacyMigration,
               ),
               _buildMenuItem(
                 icon: Icons.logout,
