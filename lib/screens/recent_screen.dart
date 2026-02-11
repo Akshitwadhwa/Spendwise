@@ -4,6 +4,7 @@ import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
 import 'edit_expense_screen.dart';
+import 'quick_add_expense_screen.dart';
 
 class RecentScreen extends StatefulWidget {
   const RecentScreen({super.key});
@@ -40,7 +41,8 @@ class _RecentScreenState extends State<RecentScreen> {
     return expenses.where((expense) {
       try {
         final expenseDate = DateFormat('dd/MM/yyyy').parse(expense.date);
-        return expenseDate.isAfter(startDate) || expenseDate.isAtSameMomentAs(startDate);
+        return expenseDate.isAfter(startDate) ||
+            expenseDate.isAtSameMomentAs(startDate);
       } catch (e) {
         return true; // Include if date parsing fails
       }
@@ -71,9 +73,12 @@ class _RecentScreenState extends State<RecentScreen> {
         backgroundColor: const Color(0xFF1e293b),
         selectedColor: const Color(0xFF10b981),
         checkmarkColor: Colors.white,
-        avatar: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+        avatar: isSelected
+            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            : null,
         elevation: isSelected ? 2 : 0,
-        shadowColor: isSelected ? const Color(0xFF10b981).withOpacity(0.3) : null,
+        shadowColor:
+            isSelected ? const Color(0xFF10b981).withOpacity(0.3) : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
           side: BorderSide(
@@ -110,14 +115,61 @@ class _RecentScreenState extends State<RecentScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              const Text(
-                'RECENT',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textGray,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w500,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'RECENT',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textGray,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const QuickAddExpenseScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10b981).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF10b981).withOpacity(0.35),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 14,
+                            color: Color(0xFF10b981),
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'AI Add',
+                            style: TextStyle(
+                              color: Color(0xFF10b981),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               const Text(
@@ -199,7 +251,8 @@ class _RecentScreenState extends State<RecentScreen> {
                       itemCount: filteredExpenses.length,
                       itemBuilder: (context, index) {
                         final expense = filteredExpenses[index];
-                        final category = CategoryData.categories[expense.category];
+                        final category =
+                            CategoryData.categories[expense.category];
                         final color = category?.color ?? AppColors.accentTeal;
                         final icon = category?.icon ?? Icons.category_outlined;
 
@@ -249,7 +302,8 @@ class _RecentScreenState extends State<RecentScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         expense.description,
@@ -309,12 +363,14 @@ class _RecentScreenState extends State<RecentScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     GestureDetector(
-                                      onTap: () => _showOptionsBottomSheet(context, expense),
+                                      onTap: () => _showOptionsBottomSheet(
+                                          context, expense),
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
                                           color: Colors.white.withOpacity(0.05),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Icon(
                                           Icons.more_vert,

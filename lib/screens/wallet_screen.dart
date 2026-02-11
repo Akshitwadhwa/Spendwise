@@ -9,6 +9,7 @@ import '../models/category_data.dart';
 import '../services/database_service.dart';
 import 'add_category_screen.dart';
 import 'profile_screen.dart';
+import 'quick_add_expense_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   final Function(TabType)? onTabChange;
@@ -81,7 +82,8 @@ class _WalletScreenState extends State<WalletScreen> {
   Map<String, double> _getCategoryTotals(List<Expense> expenses) {
     final Map<String, double> totals = {};
     for (var expense in expenses) {
-      totals[expense.category] = (totals[expense.category] ?? 0) + expense.amount;
+      totals[expense.category] =
+          (totals[expense.category] ?? 0) + expense.amount;
     }
     return totals;
   }
@@ -207,7 +209,8 @@ class _WalletScreenState extends State<WalletScreen> {
                           final entry = sortedCategories[index];
                           final category = CategoryData.categories[entry.key];
                           final color = category?.color ?? AppColors.accentTeal;
-                          final icon = category?.icon ?? Icons.category_outlined;
+                          final icon =
+                              category?.icon ?? Icons.category_outlined;
                           final percentage = grandTotal > 0
                               ? (entry.value / grandTotal * 100)
                               : 0.0;
@@ -236,7 +239,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         entry.key,
@@ -254,7 +258,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                           backgroundColor:
                                               Colors.white.withOpacity(0.1),
                                           valueColor:
-                                              AlwaysStoppedAnimation<Color>(color),
+                                              AlwaysStoppedAnimation<Color>(
+                                                  color),
                                           minHeight: 4,
                                         ),
                                       ),
@@ -337,7 +342,9 @@ class _WalletScreenState extends State<WalletScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                firstName.isNotEmpty ? firstName : 'Your Wallet',
+                                firstName.isNotEmpty
+                                    ? firstName
+                                    : 'Your Wallet',
                                 style: const TextStyle(
                                   fontSize: 26,
                                   color: AppColors.textWhite,
@@ -347,43 +354,96 @@ class _WalletScreenState extends State<WalletScreen> {
                             ],
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ProfileScreen(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.primaryGreen.withOpacity(0.4),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primaryGreen.withOpacity(0.15),
-                                  blurRadius: 12,
-                                  spreadRadius: 0,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const QuickAddExpenseScreen(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
-                              ],
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF10b981).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF10b981)
+                                        .withOpacity(0.35),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.auto_awesome,
+                                      size: 14,
+                                      color: Color(0xFF10b981),
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'AI Add',
+                                      style: TextStyle(
+                                        color: Color(0xFF10b981),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            child: ClipOval(
-                              child: photoUrl != null
-                                  ? Image.network(
-                                      photoUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          _buildAvatarFallback(firstName),
-                                    )
-                                  : _buildAvatarFallback(firstName),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ProfileScreen(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color:
+                                        AppColors.primaryGreen.withOpacity(0.4),
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primaryGreen
+                                          .withOpacity(0.15),
+                                      blurRadius: 12,
+                                      spreadRadius: 0,
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: photoUrl != null
+                                      ? Image.network(
+                                          photoUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              _buildAvatarFallback(firstName),
+                                        )
+                                      : _buildAvatarFallback(firstName),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -411,7 +471,8 @@ class _WalletScreenState extends State<WalletScreen> {
                               borderRadius: BorderRadius.circular(24),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primaryGreen.withOpacity(0.3),
+                                  color:
+                                      AppColors.primaryGreen.withOpacity(0.3),
                                   blurRadius: 24,
                                   spreadRadius: 0,
                                   offset: const Offset(0, 10),
@@ -479,7 +540,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                             vertical: 5,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.2),
+                                            color:
+                                                Colors.white.withOpacity(0.2),
                                             borderRadius:
                                                 BorderRadius.circular(20),
                                           ),
@@ -683,11 +745,11 @@ class _WalletScreenState extends State<WalletScreen> {
                               amount: categoryTotals['Lifestyle'],
                             ),
                             ...customCategories.map((category) => CategoryCard(
-                              title: category.label,
-                              icon: category.icon,
-                              color: category.color,
-                              amount: categoryTotals[category.label],
-                            )),
+                                  title: category.label,
+                                  icon: category.icon,
+                                  color: category.color,
+                                  amount: categoryTotals[category.label],
+                                )),
                             NewCategoryCard(onTap: _openAddCategoryScreen),
                           ],
                         );
@@ -759,8 +821,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         final category =
                             CategoryData.categories[expense.category];
                         final color = category?.color ?? AppColors.accentTeal;
-                        final icon =
-                            category?.icon ?? Icons.category_outlined;
+                        final icon = category?.icon ?? Icons.category_outlined;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
@@ -789,8 +850,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       expense.description,
