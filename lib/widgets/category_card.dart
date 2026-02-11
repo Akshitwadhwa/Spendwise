@@ -77,14 +77,14 @@ class CategoryCard extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 height: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Icon container - centered
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(16),
@@ -98,17 +98,17 @@ class CategoryCard extends StatelessWidget {
                       ),
                       child: Icon(
                         icon,
-                        size: 28,
+                        size: 24,
                         color: color,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Label
                     Text(
                       title,
                       style: const TextStyle(
                         color: Color(0xFFe2e8f0),
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.3,
                         height: 1.2,
@@ -118,13 +118,14 @@ class CategoryCard extends StatelessWidget {
                       maxLines: 1,
                     ),
                     if (amount != null) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         '₹${amount!.toStringAsFixed(0)}',
                         style: TextStyle(
                           color: color.withOpacity(0.9),
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
+                          height: 1.1,
                         ),
                         textAlign: TextAlign.center,
                       ),
