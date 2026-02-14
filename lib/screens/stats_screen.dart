@@ -16,6 +16,9 @@ class _StatsScreenState extends State<StatsScreen>
     with SingleTickerProviderStateMixin {
   String selectedCategory = 'All';
   String _selectedDateFilter = 'All';
+  String? _hoveredChartLabel;
+  double? _hoveredChartAmount;
+  double? _hoveredChartPercentage;
 
   late AnimationController _chartAnimationController;
   late Animation<double> _chartAnimation;
@@ -135,6 +138,166 @@ class _StatsScreenState extends State<StatsScreen>
     }
   }
 
+  List<Map<String, dynamic>> _buildPurchaseSplit(List<Expense> expenses) {
+    final Map<String, Map<String, dynamic>> grouped = {};
+
+    for (final expense in expenses) {
+      final rawLabel = expense.description.trim();
+      final label = rawLabel.isEmpty ? 'Unspecified' : rawLabel;
+      final key = label.toLowerCase();
+
+      grouped[key] ??= {
+        'label': label,
+        'total': 0.0,
+        'count': 0,
+      };
+
+      grouped[key]!['total'] =
+          (grouped[key]!['total'] as double) + expense.amount;
+      grouped[key]!['count'] = (grouped[key]!['count'] as int) + 1;
+    }
+
+    final items = grouped.values.toList()
+      ..sort((a, b) => (b['total'] as double).compareTo(a['total'] as double));
+    return items;
+  }
+
+  Color _buildSplitColor({
+    required Color baseColor,
+    required int index,
+    required int total,
+  }) {
+    if (total <= 1) return baseColor;
+    final hsl = HSLColor.fromColor(baseColor);
+    final hueShift = ((index * 37) % 120) - 60;
+    final lightnessBase = hsl.lightness + (index.isEven ? 0.12 : -0.08);
+    final steppedLightness = lightnessBase + ((index / total) * 0.06);
+    final lightness = steppedLightness.clamp(0.25, 0.75).toDouble();
+    final saturation = (hsl.saturation + 0.06).clamp(0.35, 0.95).toDouble();
+    return hsl
+        .withHue((hsl.hue + hueShift + 360) % 360)
+        .withLightness(lightness)
+        .withSaturation(saturation)
+        .toColor();
+  }
+
+  List<Map<String, dynamic>> _buildCategorySectionChartSegments(
+    Map<String, dynamic> selectedCategoryData,
+  ) {
+    final baseColor =
+        selectedCategoryData['color'] as Color? ?? AppColors.accentTeal;
+    final categoryKey = selectedCategoryData['key'] as String? ?? '';
+    final sections =
+        _buildPurchaseSplit(selectedCategoryData['expenses'] as List<Expense>);
+
+    return List.generate(sections.length, (index) {
+      final section = sections[index];
+      return {
+        'key': '$categoryKey::$index',
+        'label': section['label'] as String,
+        'total': section['total'] as double,
+        'color': _buildSplitColor(
+          baseColor: baseColor,
+          index: index,
+          total: sections.length,
+        ),
+        'count': section['count'] as int,
+      };
+    });
+  }
+
+  String? _getTappedCategoryFromChart({
+    required Offset localPosition,
+    required List<Map<String, dynamic>> categories,
+    required double total,
+    required double animationValue,
+  }) {
+    if (categories.isEmpty || total <= 0) return null;
+
+    const chartSize = Size(260, 260);
+    const strokeWidth = 28.0;
+    const gapAngle = 0.06;
+    final center = Offset(chartSize.width / 2, chartSize.height / 2);
+    final radius = chartSize.width / 2 - 20;
+
+    final dx = localPosition.dx - center.dx;
+    final dy = localPosition.dy - center.dy;
+    final distance = math.sqrt(dx * dx + dy * dy);
+    final innerRadius = radius - (strokeWidth / 2);
+    final outerRadius = radius + (strokeWidth / 2);
+
+    if (distance < innerRadius || distance > outerRadius) return null;
+
+    final angleFromTop =
+        (math.atan2(dy, dx) + (math.pi / 2) + (2 * math.pi)) % (2 * math.pi);
+    final totalGap = gapAngle * categories.length;
+    final availableAngle = (2 * math.pi - totalGap) * animationValue;
+
+    double cursor = 0;
+    for (final category in categories) {
+      final catTotal = category['total'] as double;
+      final sweep = availableAngle * (catTotal / total);
+      if (angleFromTop >= cursor && angleFromTop <= cursor + sweep) {
+        return category['key'] as String;
+      }
+      cursor += sweep + gapAngle;
+    }
+
+    return null;
+  }
+
+  void _clearHoveredChartFocus() {
+    if (_hoveredChartLabel == null &&
+        _hoveredChartAmount == null &&
+        _hoveredChartPercentage == null) {
+      return;
+    }
+    setState(() {
+      _hoveredChartLabel = null;
+      _hoveredChartAmount = null;
+      _hoveredChartPercentage = null;
+    });
+  }
+
+  void _updateHoveredChartLabel({
+    required Offset localPosition,
+    required List<Map<String, dynamic>> categories,
+    required double total,
+  }) {
+    final hoveredKey = _getTappedCategoryFromChart(
+      localPosition: localPosition,
+      categories: categories,
+      total: total,
+      animationValue: _chartAnimation.value,
+    );
+
+    String? nextLabel;
+    double? nextAmount;
+    double? nextPercentage;
+    if (hoveredKey != null) {
+      for (final category in categories) {
+        if (category['key'] == hoveredKey) {
+          nextLabel = category['label'] as String?;
+          nextAmount = category['total'] as double?;
+          nextPercentage = (nextAmount != null && total > 0)
+              ? (nextAmount / total * 100)
+              : null;
+          break;
+        }
+      }
+    }
+
+    if (_hoveredChartLabel != nextLabel ||
+        _hoveredChartAmount != nextAmount ||
+        _hoveredChartPercentage != nextPercentage) {
+      setState(() {
+        _hoveredChartLabel = nextLabel;
+        _hoveredChartAmount = nextAmount;
+        _hoveredChartPercentage = nextPercentage;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,11 +360,30 @@ class _StatsScreenState extends State<StatsScreen>
                   : 0.0;
             }
 
+            Map<String, dynamic>? selectedCategoryData;
+            if (selectedCategory != 'All') {
+              for (final category in sortedCategories) {
+                if (category['key'] == selectedCategory) {
+                  selectedCategoryData = category;
+                  break;
+                }
+              }
+            }
+
+            final chartCategories = selectedCategory == 'All'
+                ? filteredCategories
+                : selectedCategoryData != null
+                    ? _buildCategorySectionChartSegments(selectedCategoryData)
+                    : <Map<String, dynamic>>[];
+            final chartTotal = selectedCategory == 'All'
+                ? filteredTotal
+                : (selectedCategoryData?['total'] as double? ?? 0.0);
+
             // Trigger animation when chart data appears
-            if (filteredCategories.isNotEmpty && _chartWasEmpty) {
+            if (chartCategories.isNotEmpty && _chartWasEmpty) {
               _chartWasEmpty = false;
               _chartAnimationController.forward(from: 0.0);
-            } else if (filteredCategories.isEmpty && !_chartWasEmpty) {
+            } else if (chartCategories.isEmpty && !_chartWasEmpty) {
               _chartWasEmpty = true;
               _chartAnimationController.reverse();
             }
@@ -227,7 +409,10 @@ class _StatsScreenState extends State<StatsScreen>
                     const SizedBox(height: 32),
 
                     // -- DONUT CHART --
-                    _buildDonutChart(filteredCategories, filteredTotal),
+                    _buildDonutChart(
+                      categories: chartCategories,
+                      total: chartTotal,
+                    ),
 
                     const SizedBox(height: 32),
 
@@ -243,7 +428,10 @@ class _StatsScreenState extends State<StatsScreen>
                     // -- CATEGORY BREAKDOWN --
                     if (filteredCategories.isNotEmpty)
                       _buildCategoryBreakdown(
-                          filteredCategories, filteredTotal),
+                        categories: filteredCategories,
+                        total: filteredTotal,
+                        selectedCategoryData: selectedCategoryData,
+                      ),
                   ],
                 ),
               ),
@@ -331,6 +519,9 @@ class _StatsScreenState extends State<StatsScreen>
                   onSelected: (_) {
                     setState(() {
                       selectedCategory = cat;
+                      _hoveredChartLabel = null;
+                      _hoveredChartAmount = null;
+                      _hoveredChartPercentage = null;
                     });
                   },
                 );
@@ -344,91 +535,191 @@ class _StatsScreenState extends State<StatsScreen>
 
   // ─── DONUT CHART ──────────────────────────────────────────
 
-  Widget _buildDonutChart(
-      List<Map<String, dynamic>> categories, double total) {
+  Widget _buildDonutChart({
+    required List<Map<String, dynamic>> categories,
+    required double total,
+  }) {
     return AnimatedBuilder(
       animation: _chartAnimation,
       builder: (context, child) {
         return Opacity(
           opacity: _chartAnimation.value,
           child: Center(
-            child: SizedBox(
-              width: 260,
-              height: 260,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Glow behind chart
-                  if (categories.isNotEmpty)
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (categories.first['color'] as Color)
-                                .withOpacity(0.08),
-                            blurRadius: 60,
-                            spreadRadius: 20,
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTapDown: (selectedCategory == 'All' || categories.isEmpty)
+                      ? null
+                      : (details) {
+                          _updateHoveredChartLabel(
+                            localPosition: details.localPosition,
+                            categories: categories,
+                            total: total,
+                          );
+                        },
+                  onTapUp: (selectedCategory != 'All' || categories.isEmpty)
+                      ? null
+                      : (details) {
+                          final tappedCategory = _getTappedCategoryFromChart(
+                            localPosition: details.localPosition,
+                            categories: categories,
+                            total: total,
+                            animationValue: _chartAnimation.value,
+                          );
+                          if (tappedCategory == null ||
+                              tappedCategory == selectedCategory) {
+                            return;
+                          }
+                          setState(() {
+                            selectedCategory = tappedCategory;
+                            _hoveredChartLabel = null;
+                            _hoveredChartAmount = null;
+                            _hoveredChartPercentage = null;
+                          });
+                        },
+                  onPanUpdate: (selectedCategory == 'All' || categories.isEmpty)
+                      ? null
+                      : (details) {
+                          _updateHoveredChartLabel(
+                            localPosition: details.localPosition,
+                            categories: categories,
+                            total: total,
+                          );
+                        },
+                  onPanEnd: (selectedCategory == 'All' || categories.isEmpty)
+                      ? null
+                      : (_) => _clearHoveredChartFocus(),
+                  child: MouseRegion(
+                    onHover: (event) {
+                      _updateHoveredChartLabel(
+                        localPosition: event.localPosition,
+                        categories: categories,
+                        total: total,
+                      );
+                    },
+                    onExit: (_) {
+                      _clearHoveredChartFocus();
+                    },
+                    child: SizedBox(
+                      width: 260,
+                      height: 260,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Glow behind chart
+                          if (categories.isNotEmpty)
+                            Container(
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (categories.first['color'] as Color)
+                                        .withOpacity(0.08),
+                                    blurRadius: 60,
+                                    spreadRadius: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Chart
+                          if (categories.isNotEmpty)
+                            CustomPaint(
+                              size: const Size(260, 260),
+                              painter: DonutChartPainter(
+                                categories: categories,
+                                totalBalance: total,
+                                animationValue: _chartAnimation.value,
+                              ),
+                            ),
+
+                          // Empty state
+                          if (categories.isEmpty)
+                            Container(
+                              width: 260,
+                              height: 260,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF1e293b),
+                                  width: 28,
+                                ),
+                              ),
+                            ),
+
+                          // Center label
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 120,
+                                child: Text(
+                                  (_hoveredChartLabel ??
+                                          (selectedCategory == 'All'
+                                              ? 'TOTAL'
+                                              : selectedCategory))
+                                      .toUpperCase(),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '\u20B9${_formatCurrency(_hoveredChartAmount ?? total)}',
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              if (_hoveredChartPercentage != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_hoveredChartPercentage!.toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
                     ),
-
-                  // Chart
-                  if (categories.isNotEmpty)
-                    CustomPaint(
-                      size: const Size(260, 260),
-                      painter: DonutChartPainter(
-                        categories: categories,
-                        totalBalance: total,
-                        animationValue: _chartAnimation.value,
-                      ),
+                  ),
+                ),
+                if (selectedCategory == 'All' && categories.length > 1) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Tap a slice to open category details',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
                     ),
-
-                  // Empty state
-                  if (categories.isEmpty)
-                    Container(
-                      width: 260,
-                      height: 260,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF1e293b),
-                          width: 28,
-                        ),
-                      ),
+                  ),
+                ] else if (selectedCategory != 'All' &&
+                    categories.length > 1) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Hover or drag on slices to view labels',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
                     ),
-
-                  // Center label
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        selectedCategory == 'All'
-                            ? 'TOTAL'
-                            : selectedCategory.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '\u20B9${_formatCurrency(total)}',
-                        style: const TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
-              ),
+              ],
             ),
           ),
         );
@@ -528,8 +819,16 @@ class _StatsScreenState extends State<StatsScreen>
 
   // ─── CATEGORY BREAKDOWN ───────────────────────────────────
 
-  Widget _buildCategoryBreakdown(
-      List<Map<String, dynamic>> categories, double total) {
+  Widget _buildCategoryBreakdown({
+    required List<Map<String, dynamic>> categories,
+    required double total,
+    required Map<String, dynamic>? selectedCategoryData,
+  }) {
+    final isDrilldown = selectedCategoryData != null;
+    final purchaseSplit = isDrilldown
+        ? _buildPurchaseSplit(selectedCategoryData['expenses'] as List<Expense>)
+        : const <Map<String, dynamic>>[];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -539,16 +838,18 @@ class _StatsScreenState extends State<StatsScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Breakdown',
-                style: TextStyle(
+              Text(
+                isDrilldown ? 'Purchase Split' : 'Breakdown',
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
               Text(
-                '${categories.length} categories',
+                isDrilldown
+                    ? '${purchaseSplit.length} purposes'
+                    : '${categories.length} categories',
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.grey[600],
@@ -559,24 +860,48 @@ class _StatsScreenState extends State<StatsScreen>
 
           const SizedBox(height: 16),
 
-          // Category rows
-          ...categories.map((cat) {
-            final catTotal = cat['total'] as double;
-            final percentage = total > 0 ? (catTotal / total * 100) : 0.0;
-            final color = cat['color'] as Color;
-            final icon = cat['icon'] as IconData;
-            final label = cat['label'] as String;
-            final expenses = cat['expenses'] as List<Expense>;
+          if (isDrilldown) ...[
+            Text(
+              'Inside ${(selectedCategoryData['label'] as String)}',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...purchaseSplit.map((item) {
+              final amount = item['total'] as double;
+              final percentage = total > 0 ? (amount / total * 100) : 0.0;
+              return _buildBreakdownRow(
+                label: item['label'] as String,
+                icon: Icons.shopping_bag_outlined,
+                color: selectedCategoryData['color'] as Color,
+                amount: amount,
+                percentage: percentage,
+                count: item['count'] as int,
+              );
+            }),
+          ] else ...[
+            // Category rows
+            ...categories.map((cat) {
+              final catTotal = cat['total'] as double;
+              final percentage = total > 0 ? (catTotal / total * 100) : 0.0;
+              final color = cat['color'] as Color;
+              final icon = cat['icon'] as IconData;
+              final label = cat['label'] as String;
+              final expenses = cat['expenses'] as List<Expense>;
 
-            return _buildBreakdownRow(
-              label: label,
-              icon: icon,
-              color: color,
-              amount: catTotal,
-              percentage: percentage,
-              count: expenses.length,
-            );
-          }),
+              return _buildBreakdownRow(
+                label: label,
+                icon: icon,
+                color: color,
+                amount: catTotal,
+                percentage: percentage,
+                count: expenses.length,
+              );
+            }),
+          ],
         ],
       ),
     );

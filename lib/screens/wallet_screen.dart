@@ -11,6 +11,8 @@ import 'add_category_screen.dart';
 import 'profile_screen.dart';
 import 'quick_add_expense_screen.dart';
 
+enum _BalanceView { all, month }
+
 class WalletScreen extends StatefulWidget {
   final Function(TabType)? onTabChange;
 
@@ -21,6 +23,8 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
+  _BalanceView _balanceView = _BalanceView.all;
+
   void _addCustomCategory(CategoryData category) {
     DatabaseService.addCategory(category);
     CategoryData.categories[category.id] = category;
@@ -77,6 +81,16 @@ class _WalletScreenState extends State<WalletScreen> {
       }
     }
     return total;
+  }
+
+  bool _isExpenseInCurrentMonth(Expense expense) {
+    try {
+      final now = DateTime.now();
+      final date = DateFormat('dd/MM/yyyy').parse(expense.date);
+      return date.month == now.month && date.year == now.year;
+    } catch (_) {
+      return false;
+    }
   }
 
   Map<String, double> _getCategoryTotals(List<Expense> expenses) {
@@ -314,9 +328,28 @@ class _WalletScreenState extends State<WalletScreen> {
           stream: DatabaseService.getExpenses(),
           builder: (context, expenseSnapshot) {
             final allExpenses = expenseSnapshot.data ?? [];
-            final categoryTotals = _getCategoryTotals(allExpenses);
+            final selectedViewExpenses = _balanceView == _BalanceView.month
+                ? allExpenses.where(_isExpenseInCurrentMonth).toList()
+                : allExpenses;
+            final categoryTotals = _getCategoryTotals(selectedViewExpenses);
             final monthTotal = _getMonthTotal(allExpenses);
             final todayTotal = _getTodayTotal(allExpenses);
+            final nonSensorExpenses = allExpenses
+                .where(
+                  (expense) =>
+                      !expense.description.toLowerCase().contains('sensor'),
+                )
+                .toList();
+            final selectedViewNonSensorExpenses =
+                _balanceView == _BalanceView.month
+                    ? nonSensorExpenses.where(_isExpenseInCurrentMonth).toList()
+                    : nonSensorExpenses;
+            final displayedBalance = selectedViewNonSensorExpenses.fold<double>(
+              0,
+              (sum, expense) => sum + expense.amount,
+            );
+            final displayedBalanceLabel =
+                _balanceView == _BalanceView.month ? 'This month' : 'All time';
 
             return SingleChildScrollView(
               child: Padding(
@@ -449,160 +482,142 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // ── Balance Toggle ──
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildBalanceToggleOption(
+                            label: 'All',
+                            isSelected: _balanceView == _BalanceView.all,
+                            onTap: () {
+                              if (_balanceView == _BalanceView.all) return;
+                              setState(() {
+                                _balanceView = _BalanceView.all;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildBalanceToggleOption(
+                            label: 'This Month',
+                            isSelected: _balanceView == _BalanceView.month,
+                            onTap: () {
+                              if (_balanceView == _BalanceView.month) return;
+                              setState(() {
+                                _balanceView = _BalanceView.month;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
                     // ── Balance Card ──
-                    StreamBuilder<double>(
-                      stream: DatabaseService.getTotalBalance(),
-                      builder: (context, balanceSnapshot) {
-                        final totalBalance = balanceSnapshot.data ?? 0.0;
-                        return GestureDetector(
-                          onTap: () => _showBalanceSplitPopup(context),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF3dd598),
-                                  Color(0xFF25a06a),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      AppColors.primaryGreen.withOpacity(0.3),
-                                  blurRadius: 24,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
+                    GestureDetector(
+                      onTap: () => _showBalanceSplitPopup(context),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF3dd598),
+                              Color(0xFF25a06a),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryGreen.withOpacity(0.3),
+                              blurRadius: 24,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 10),
                             ),
-                            child: Stack(
+                          ],
+                        ),
+                        child: Stack(
+                          children: [
+                            // Decorative circles
+                            Positioned(
+                              right: -30,
+                              top: -30,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.08),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right: 30,
+                              bottom: -40,
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.06),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: -20,
+                              bottom: -20,
+                              child: Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.05),
+                                ),
+                              ),
+                            ),
+                            // Card content
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Decorative circles
-                                Positioned(
-                                  right: -30,
-                                  top: -30,
-                                  child: Container(
-                                    width: 120,
-                                    height: 120,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withOpacity(0.08),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 30,
-                                  bottom: -40,
-                                  child: Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withOpacity(0.06),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: -20,
-                                  bottom: -20,
-                                  child: Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withOpacity(0.05),
-                                    ),
-                                  ),
-                                ),
-                                // Card content
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text(
-                                          'Total Balance',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.white70,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 5,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withOpacity(0.2),
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.pie_chart_outline,
-                                                color: Colors.white,
-                                                size: 14,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${allExpenses.length} entries',
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      '₹${totalBalance.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontSize: 36,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: -0.5,
+                                    const Text(
+                                      'Total Balance',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    const SizedBox(height: 14),
-                                    // Month indicator
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
+                                        horizontal: 10,
+                                        vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(12),
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const Icon(
-                                            Icons.calendar_today_rounded,
+                                            Icons.pie_chart_outline,
                                             color: Colors.white,
                                             size: 14,
                                           ),
-                                          const SizedBox(width: 6),
+                                          const SizedBox(width: 4),
                                           Text(
-                                            'This month: ₹${monthTotal.toStringAsFixed(0)}',
+                                            '${allExpenses.length} entries',
                                             style: const TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 11,
                                               color: Colors.white,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ],
@@ -610,11 +625,52 @@ class _WalletScreenState extends State<WalletScreen> {
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  '₹${displayedBalance.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                // Current period indicator
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.calendar_today_rounded,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '$displayedBalanceLabel view',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                        );
-                      },
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 18),
 
@@ -756,15 +812,15 @@ class _WalletScreenState extends State<WalletScreen> {
                                     ? 3
                                     : 2;
 
-                            final itemWidth = (maxWidth -
-                                    (spacing * (crossAxisCount - 1))) /
-                                crossAxisCount;
+                            final itemWidth =
+                                (maxWidth - (spacing * (crossAxisCount - 1))) /
+                                    crossAxisCount;
                             final textScale =
                                 MediaQuery.textScalerOf(context).scale(1.0);
-                            final mainAxisExtent = (itemWidth *
-                                    (1.02 + ((textScale - 1.0) * 0.2)))
-                                .clamp(150.0, 210.0)
-                                .toDouble();
+                            final mainAxisExtent =
+                                (itemWidth * (1.02 + ((textScale - 1.0) * 0.2)))
+                                    .clamp(150.0, 210.0)
+                                    .toDouble();
 
                             return GridView.builder(
                               shrinkWrap: true,
@@ -942,6 +998,45 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceToggleOption({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primaryGreen.withOpacity(0.2)
+                : Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primaryGreen.withOpacity(0.5)
+                  : Colors.white.withOpacity(0.1),
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? AppColors.primaryGreen : Colors.grey[400],
+            ),
+          ),
         ),
       ),
     );
