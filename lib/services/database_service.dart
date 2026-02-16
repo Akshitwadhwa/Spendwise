@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../models/carpool_entry.dart';
 import '../models/category_data.dart';
 
 class DatabaseService {
@@ -26,6 +27,12 @@ class DatabaseService {
     String userId,
   ) {
     return _db.collection('users').doc(userId).collection('categories');
+  }
+
+  static CollectionReference<Map<String, dynamic>> _carpoolCollection(
+    String userId,
+  ) {
+    return _db.collection('users').doc(userId).collection('carpoolEntries');
   }
 
   // ==================== EXPENSES ====================
@@ -148,6 +155,62 @@ class DatabaseService {
     return _expensesCollection(userId)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
+  }
+
+  // ==================== CARPOOL ====================
+
+  /// Add a new carpool entry
+  static Future<String> addCarpoolEntry(CarpoolEntry entry) async {
+    final userId = _requireUserId();
+    final docRef = await _carpoolCollection(userId).add({
+      'type': entry.type.name,
+      'amount': entry.amount,
+      'description': entry.description,
+      'date': entry.date,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    return docRef.id;
+  }
+
+  /// Get all carpool entries
+  static Stream<List<CarpoolEntry>> getCarpoolEntries() {
+    final userId = _currentUserId;
+    if (userId == null) {
+      return Stream.value(const []);
+    }
+
+    return _carpoolCollection(userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              final rawType = (data['type'] as String? ?? 'petrol').toLowerCase();
+              final type = rawType == 'fees'
+                  ? CarpoolEntryType.fees
+                  : CarpoolEntryType.petrol;
+              return CarpoolEntry(
+                id: doc.id,
+                type: type,
+                amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+                description: data['description'] as String? ?? '',
+                date: data['date'] as String? ?? '',
+              );
+            }).toList());
+  }
+
+  /// Carpool balance = petrol charges - fees
+  static Stream<double> getCarpoolBalance() {
+    return getCarpoolEntries().map((entries) {
+      double total = 0;
+      for (final entry in entries) {
+        if (entry.type == CarpoolEntryType.petrol) {
+          total += entry.amount;
+        } else {
+          total -= entry.amount;
+        }
+      }
+      return total;
+    });
   }
 
   // ==================== CATEGORIES ====================

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
-enum TabType { home, recent, stats }
+enum TabType { home, recent, stats, carpool }
 
 class BottomNavbar extends StatelessWidget {
   final TabType activeTab;
@@ -19,6 +19,12 @@ class BottomNavbar extends StatelessWidget {
       const _TabItem(id: TabType.home, icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
       const _TabItem(id: TabType.recent, icon: Icons.history, activeIcon: Icons.history, label: 'Recent'),
       const _TabItem(id: TabType.stats, icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: 'Stats'),
+      const _TabItem(
+        id: TabType.carpool,
+        icon: Icons.directions_car_outlined,
+        activeIcon: Icons.directions_car,
+        label: 'Carpool',
+      ),
     ];
 
     return Positioned(
@@ -32,15 +38,15 @@ class BottomNavbar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1e293b).withOpacity(0.9),
+              color: const Color(0xFF1e293b).withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   blurRadius: 30,
                   spreadRadius: 0,
                   offset: const Offset(0, 10),
@@ -60,7 +66,7 @@ class BottomNavbar extends StatelessWidget {
                       height: 56,
                       decoration: BoxDecoration(
                         color: isActive 
-                            ? Colors.white.withOpacity(0.1) 
+                            ? Colors.white.withValues(alpha: 0.1) 
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -107,7 +113,7 @@ class BottomNavbar extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF34d399).withOpacity(0.8),
+                                      color: const Color(0xFF34d399).withValues(alpha: 0.8),
                                       blurRadius: 8,
                                       spreadRadius: 0,
                                     ),
