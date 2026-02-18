@@ -780,79 +780,89 @@ class _WalletScreenState extends State<WalletScreen> {
                           CategoryData.categories[category.id] = category;
                         }
 
-                        final categoryCards = <Widget>[
-                          CategoryCard(
-                            title: 'Home',
-                            icon: Icons.home_outlined,
-                            color: AppColors.homeBlue,
-                            amount: categoryTotals['Home'],
-                          ),
-                          CategoryCard(
-                            title: 'College',
-                            icon: Icons.school_outlined,
-                            color: AppColors.collegeOrange,
-                            amount: categoryTotals['College'],
-                          ),
-                          CategoryCard(
-                            title: 'Medicine',
-                            icon: Icons.favorite_border,
-                            color: AppColors.medicinePink,
-                            amount: categoryTotals['Medicine'],
-                          ),
-                          CategoryCard(
-                            title: 'Lifestyle',
-                            icon: Icons.spa_outlined,
-                            color: AppColors.lifestylePurple,
-                            amount: categoryTotals['Lifestyle'],
-                          ),
-                          CategoryCard(
-                            title: 'Carpool',
-                            icon: Icons.directions_car_outlined,
-                            color: AppColors.accentTeal,
-                            amount: categoryTotals['Carpool'],
-                          ),
-                          ...customCategories.map((category) => CategoryCard(
-                                title: category.label,
-                                icon: category.icon,
-                                color: category.color,
-                                amount: categoryTotals[category.label],
-                              )),
-                          NewCategoryCard(onTap: _openAddCategoryScreen),
-                        ];
+                        return StreamBuilder<bool>(
+                          stream: DatabaseService.shouldShowCarpoolSection(),
+                          builder: (context, showCarpoolSnapshot) {
+                            final showCarpool =
+                                showCarpoolSnapshot.data ?? false;
 
-                        return LayoutBuilder(
-                          builder: (context, constraints) {
-                            const spacing = 14.0;
-                            final maxWidth = constraints.maxWidth;
-                            final crossAxisCount = maxWidth >= 900
-                                ? 4
-                                : maxWidth >= 620
-                                    ? 3
-                                    : 2;
+                            final categoryCards = <Widget>[
+                              CategoryCard(
+                                title: 'Home',
+                                icon: Icons.home_outlined,
+                                color: AppColors.homeBlue,
+                                amount: categoryTotals['Home'],
+                              ),
+                              CategoryCard(
+                                title: 'College',
+                                icon: Icons.school_outlined,
+                                color: AppColors.collegeOrange,
+                                amount: categoryTotals['College'],
+                              ),
+                              CategoryCard(
+                                title: 'Medicine',
+                                icon: Icons.favorite_border,
+                                color: AppColors.medicinePink,
+                                amount: categoryTotals['Medicine'],
+                              ),
+                              CategoryCard(
+                                title: 'Lifestyle',
+                                icon: Icons.spa_outlined,
+                                color: AppColors.lifestylePurple,
+                                amount: categoryTotals['Lifestyle'],
+                              ),
+                              if (showCarpool)
+                                CategoryCard(
+                                  title: 'Carpool',
+                                  icon: Icons.directions_car_outlined,
+                                  color: AppColors.accentTeal,
+                                  amount: categoryTotals['Carpool'],
+                                ),
+                              ...customCategories
+                                  .map((category) => CategoryCard(
+                                        title: category.label,
+                                        icon: category.icon,
+                                        color: category.color,
+                                        amount: categoryTotals[category.label],
+                                      )),
+                              NewCategoryCard(onTap: _openAddCategoryScreen),
+                            ];
 
-                            final itemWidth =
-                                (maxWidth - (spacing * (crossAxisCount - 1))) /
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                const spacing = 14.0;
+                                final maxWidth = constraints.maxWidth;
+                                final crossAxisCount = maxWidth >= 900
+                                    ? 4
+                                    : maxWidth >= 620
+                                        ? 3
+                                        : 2;
+
+                                final itemWidth = (maxWidth -
+                                        (spacing * (crossAxisCount - 1))) /
                                     crossAxisCount;
-                            final textScale =
-                                MediaQuery.textScalerOf(context).scale(1.0);
-                            final mainAxisExtent =
-                                (itemWidth * (1.02 + ((textScale - 1.0) * 0.2)))
+                                final textScale =
+                                    MediaQuery.textScalerOf(context).scale(1.0);
+                                final mainAxisExtent = (itemWidth *
+                                        (1.02 + ((textScale - 1.0) * 0.2)))
                                     .clamp(150.0, 210.0)
                                     .toDouble();
 
-                            return GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: categoryCards.length,
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: spacing,
-                                mainAxisSpacing: spacing,
-                                mainAxisExtent: mainAxisExtent,
-                              ),
-                              itemBuilder: (context, index) =>
-                                  categoryCards[index],
+                                return GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: categoryCards.length,
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    crossAxisSpacing: spacing,
+                                    mainAxisSpacing: spacing,
+                                    mainAxisExtent: mainAxisExtent,
+                                  ),
+                                  itemBuilder: (context, index) =>
+                                      categoryCards[index],
+                                );
+                              },
                             );
                           },
                         );

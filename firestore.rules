@@ -1,8 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function canReadCarpoolFrom(userId) {
+      return isSignedIn()
+          && get(/databases/$(database)/documents/users/$(userId)).data.carpoolSharedWithUid == request.auth.uid;
+    }
+
+    // Primary user-owned data access.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Expenses stay private except Carpool rows explicitly shared by owner.
+    match /users/{userId}/expenses/{expenseId} {
+      allow read: if isOwner(userId)
+          || (resource.data.category == 'Carpool' && canReadCarpoolFrom(userId));
+      allow write: if isOwner(userId);
+    }
+
+    // Everything else under /users remains owner-only.
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
     // Deny everything else

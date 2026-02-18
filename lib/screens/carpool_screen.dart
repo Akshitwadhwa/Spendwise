@@ -36,6 +36,16 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
     });
 
     try {
+      final linkedSourceUid = await DatabaseService.getCarpoolSourceUid().first;
+      if (linkedSourceUid != null) {
+        if (mounted) {
+          setState(() {
+            _isMigratingLegacyData = false;
+          });
+        }
+        return;
+      }
+
       final imported =
           await DatabaseService.migrateLegacyCarpoolDataToCategoryExpenses();
       if (mounted && imported > 0) {
@@ -253,217 +263,291 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: StreamBuilder<List<Expense>>(
-          stream: DatabaseService.getAllExpensesByCategory('Carpool'),
-          builder: (context, snapshot) {
-            final entries = snapshot.data ?? const <Expense>[];
-            final balance = entries.fold<double>(
-              0,
-              (sum, entry) =>
-                  sum + (_isFeesExpense(entry) ? -entry.amount : entry.amount),
-            );
+        child: StreamBuilder<String?>(
+          stream: DatabaseService.getCarpoolSourceUid(),
+          builder: (context, sourceSnapshot) {
+            final linkedSourceUid = sourceSnapshot.data;
 
-            return SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Carpool',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Track petrol charges and fees.',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (_isMigratingLegacyData) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Importing legacy carpool data...',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 18),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          colors: [
-                            balance >= 0
-                                ? const Color(0xFF34d399)
-                                : const Color(0xFFfb7185),
-                            balance >= 0
-                                ? const Color(0xFF10b981)
-                                : const Color(0xFFf43f5e),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Current Carpool Balance',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '₹${balance.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 34,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionCard(
-                            title: 'Add Petrol Charge',
-                            subtitle: 'Increases balance',
-                            icon: Icons.local_gas_station_outlined,
-                            color: AppColors.primaryGreen,
-                            onTap: () =>
-                                _showAddEntryDialog(CarpoolEntryType.petrol),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ActionCard(
-                            title: 'Add Fees',
-                            subtitle: 'Subtracts balance',
-                            icon: Icons.money_off_csred_outlined,
-                            color: const Color(0xFFf87171),
-                            onTap: () =>
-                                _showAddEntryDialog(CarpoolEntryType.fees),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'History',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (entries.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.04),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
-                          ),
-                        ),
-                        child: Text(
-                          'No carpool entries yet.',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 14,
-                          ),
-                        ),
-                      )
-                    else
-                      ...entries.map((entry) {
-                        final isFees = _isFeesExpense(entry);
-                        final amountColor = isFees
-                            ? const Color(0xFFf87171)
-                            : AppColors.primaryGreen;
+            return StreamBuilder<bool>(
+              stream: DatabaseService.isCarpoolEditableForCurrentAccount(),
+              builder: (context, editableSnapshot) {
+                final isEditable = editableSnapshot.data ?? true;
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
+                return StreamBuilder<List<Expense>>(
+                  stream: DatabaseService.getCarpoolExpensesForCurrentAccount(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Container(
+                          width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(14),
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.08),
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: amountColor.withValues(alpha: 0.14),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  isFees
-                                      ? Icons.money_off_csred_outlined
-                                      : Icons.local_gas_station_outlined,
-                                  color: amountColor,
-                                  size: 20,
-                                ),
+                          child: const Text(
+                            'Unable to load linked Carpool data. Make sure the source account shares Carpool access with your UID.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final entries = snapshot.data ?? const <Expense>[];
+                    final balance = entries.fold<double>(
+                      0,
+                      (sum, entry) =>
+                          sum +
+                          (_isFeesExpense(entry)
+                              ? -entry.amount
+                              : entry.amount),
+                    );
+
+                    return SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Carpool',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      entry.description,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      entry.date,
-                                      style: TextStyle(
-                                        color: Colors.grey[500],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              linkedSourceUid == null
+                                  ? 'Track petrol charges and fees.'
+                                  : 'Showing carpool data from linked account.',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 13,
                               ),
+                            ),
+                            if (_isMigratingLegacyData) ...[
+                              const SizedBox(height: 12),
                               Text(
-                                '${isFees ? '-' : '+'}₹${entry.amount.toStringAsFixed(2)}',
+                                'Importing legacy carpool data...',
                                 style: TextStyle(
-                                  color: amountColor,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
-                          ),
-                        );
-                      }),
-                    const SizedBox(height: 120),
-                  ],
-                ),
-              ),
+                            if (!isEditable && linkedSourceUid != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Read-only mode. Linked source UID: $linkedSourceUid',
+                                  style: TextStyle(
+                                    color: Colors.grey[300],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 18),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    balance >= 0
+                                        ? const Color(0xFF34d399)
+                                        : const Color(0xFFfb7185),
+                                    balance >= 0
+                                        ? const Color(0xFF10b981)
+                                        : const Color(0xFFf43f5e),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Current Carpool Balance',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '₹${balance.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isEditable) ...[
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _ActionCard(
+                                      title: 'Add Petrol Charge',
+                                      subtitle: 'Increases balance',
+                                      icon: Icons.local_gas_station_outlined,
+                                      color: AppColors.primaryGreen,
+                                      onTap: () => _showAddEntryDialog(
+                                        CarpoolEntryType.petrol,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _ActionCard(
+                                      title: 'Add Fees',
+                                      subtitle: 'Subtracts balance',
+                                      icon: Icons.money_off_csred_outlined,
+                                      color: const Color(0xFFf87171),
+                                      onTap: () => _showAddEntryDialog(
+                                        CarpoolEntryType.fees,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            const Text(
+                              'History',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (entries.isEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(18),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.04),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                  ),
+                                ),
+                                child: Text(
+                                  'No carpool entries yet.',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              )
+                            else
+                              ...entries.map((entry) {
+                                final isFees = _isFeesExpense(entry);
+                                final amountColor = isFees
+                                    ? const Color(0xFFf87171)
+                                    : AppColors.primaryGreen;
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.08),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: amountColor.withValues(
+                                            alpha: 0.14,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          isFees
+                                              ? Icons.money_off_csred_outlined
+                                              : Icons
+                                                  .local_gas_station_outlined,
+                                          color: amountColor,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              entry.description,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              entry.date,
+                                              style: TextStyle(
+                                                color: Colors.grey[500],
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '${isFees ? '-' : '+'}₹${entry.amount.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          color: amountColor,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            const SizedBox(height: 120),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             );
           },
         ),
