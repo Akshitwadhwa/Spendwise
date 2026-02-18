@@ -177,7 +177,7 @@ class DatabaseService {
     await _expensesCollection(userId).doc(expenseId).delete();
   }
 
-  /// Get total balance (sum of all expenses, excluding Sensor)
+  /// Get total balance (sum of all expenses, excluding Sensor and Carpool)
   static Stream<double> getTotalBalance() {
     final userId = _currentUserId;
     if (userId == null) {
@@ -189,9 +189,11 @@ class DatabaseService {
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final description = data['description'] as String? ?? '';
+        final category = (data['category'] as String? ?? '').toLowerCase();
 
-        // Exclude Sensor expenses from total balance
-        if (!description.toLowerCase().contains('sensor')) {
+        // Exclude Sensor and Carpool expenses from total balance
+        if (!description.toLowerCase().contains('sensor') &&
+            category != 'carpool') {
           total += (data['amount'] as num).toDouble();
         }
       }

@@ -70,10 +70,19 @@ class _WalletScreenState extends State<WalletScreen> {
     return FirebaseAuth.instance.currentUser?.photoURL;
   }
 
+  bool _isCarpoolExpense(Expense expense) {
+    return expense.category.toLowerCase() == 'carpool';
+  }
+
+  bool _isSensorExpense(Expense expense) {
+    return expense.description.toLowerCase().contains('sensor');
+  }
+
   double _getMonthTotal(List<Expense> expenses) {
     final now = DateTime.now();
     double total = 0;
     for (var expense in expenses) {
+      if (_isCarpoolExpense(expense)) continue;
       try {
         final date = DateFormat('dd/MM/yyyy').parse(expense.date);
         if (date.month == now.month && date.year == now.year) {
@@ -88,6 +97,7 @@ class _WalletScreenState extends State<WalletScreen> {
     final today = DateFormat('dd/MM/yyyy').format(DateTime.now());
     double total = 0;
     for (var expense in expenses) {
+      if (_isCarpoolExpense(expense)) continue;
       if (expense.date == today) {
         total += expense.amount;
       }
@@ -121,10 +131,12 @@ class _WalletScreenState extends State<WalletScreen> {
         stream: DatabaseService.getExpenses(),
         builder: (context, snapshot) {
           final expenses = snapshot.data ?? [];
+          final totalSpendExpenses =
+              expenses.where((expense) => !_isCarpoolExpense(expense)).toList();
 
           final Map<String, double> categoryTotals = {};
           double grandTotal = 0;
-          for (var expense in expenses) {
+          for (var expense in totalSpendExpenses) {
             categoryTotals[expense.category] =
                 (categoryTotals[expense.category] ?? 0) + expense.amount;
             grandTotal += expense.amount;
@@ -349,7 +361,7 @@ class _WalletScreenState extends State<WalletScreen> {
             final nonSensorExpenses = allExpenses
                 .where(
                   (expense) =>
-                      !expense.description.toLowerCase().contains('sensor'),
+                      !_isSensorExpense(expense) && !_isCarpoolExpense(expense),
                 )
                 .toList();
             final selectedViewNonSensorExpenses =
