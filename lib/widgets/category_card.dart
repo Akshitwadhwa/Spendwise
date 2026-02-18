@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/category_data.dart';
 import '../screens/add_expense_screen.dart';
+import '../screens/carpool_screen.dart';
 
 class CategoryCard extends StatelessWidget {
   final String title;
@@ -63,10 +64,21 @@ class CategoryCard extends StatelessWidget {
               onTap: () {
                 final category = CategoryData.categories[title];
                 if (category != null) {
+                  if (category.isSpecial && category.id == 'Carpool') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CarpoolScreen(),
+                      ),
+                    );
+                    return;
+                  }
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddExpenseScreen(category: category),
+                      builder: (context) =>
+                          AddExpenseScreen(category: category),
                     ),
                   );
                 }

@@ -3,7 +3,6 @@ import '../widgets/bottom_navbar.dart';
 import 'wallet_screen.dart';
 import 'recent_screen.dart';
 import 'stats_screen.dart';
-import 'carpool_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,8 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return const RecentScreen();
       case TabType.stats:
         return const StatsScreen();
-      case TabType.carpool:
-        return const CarpoolScreen();
     }
   }
 

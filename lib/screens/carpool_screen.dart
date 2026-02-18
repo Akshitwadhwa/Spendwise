@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/carpool_entry.dart';
+import '../models/category_data.dart';
 import '../services/database_service.dart';
 import '../utils/colors.dart';
 
@@ -14,12 +15,57 @@ class CarpoolScreen extends StatefulWidget {
 class _CarpoolScreenState extends State<CarpoolScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  bool _isMigratingLegacyData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _migrateLegacyCarpoolData();
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _migrateLegacyCarpoolData() async {
+    setState(() {
+      _isMigratingLegacyData = true;
+    });
+
+    try {
+      final imported =
+          await DatabaseService.migrateLegacyCarpoolDataToCategoryExpenses();
+      if (mounted && imported > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Imported $imported legacy carpool entries.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Could not import legacy carpool data.')),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isMigratingLegacyData = false;
+      });
+    }
+  }
+
+  bool _isFeesExpense(Expense expense) {
+    final rawType = (expense.carpoolType ?? '').toLowerCase();
+    if (rawType == 'fees') return true;
+    if (rawType == 'petrol') return false;
+
+    final description = expense.description.toLowerCase();
+    return description.contains('fee');
   }
 
   Future<void> _showAddEntryDialog(CarpoolEntryType type) async {
@@ -63,8 +109,9 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                       labelStyle: TextStyle(color: Colors.grey[400]),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -85,8 +132,9 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                       labelStyle: TextStyle(color: Colors.grey[400]),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -135,19 +183,21 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                           });
 
                           try {
-                            await DatabaseService.addCarpoolEntry(
-                              CarpoolEntry(
+                            await DatabaseService.addExpense(
+                              Expense(
                                 id: '',
-                                type: type,
                                 amount: amount,
-                                description: _descriptionController.text.trim().isEmpty
-                                    ? (type == CarpoolEntryType.petrol
-                                        ? 'Petrol charge'
-                                        : 'Fees')
-                                    : _descriptionController.text.trim(),
+                                description:
+                                    _descriptionController.text.trim().isEmpty
+                                        ? (type == CarpoolEntryType.petrol
+                                            ? 'Petrol charge'
+                                            : 'Fees')
+                                        : _descriptionController.text.trim(),
                                 date: DateFormat(
                                   'dd/MM/yyyy',
                                 ).format(DateTime.now()),
+                                category: 'Carpool',
+                                carpoolType: type.name,
                               ),
                             );
 
@@ -203,16 +253,14 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: StreamBuilder<List<CarpoolEntry>>(
-          stream: DatabaseService.getCarpoolEntries(),
+        child: StreamBuilder<List<Expense>>(
+          stream: DatabaseService.getAllExpensesByCategory('Carpool'),
           builder: (context, snapshot) {
-            final entries = snapshot.data ?? const <CarpoolEntry>[];
+            final entries = snapshot.data ?? const <Expense>[];
             final balance = entries.fold<double>(
               0,
-              (sum, entry) => sum +
-                  (entry.type == CarpoolEntryType.petrol
-                      ? entry.amount
-                      : -entry.amount),
+              (sum, entry) =>
+                  sum + (_isFeesExpense(entry) ? -entry.amount : entry.amount),
             );
 
             return SingleChildScrollView(
@@ -237,6 +285,16 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                         fontSize: 13,
                       ),
                     ),
+                    if (_isMigratingLegacyData) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Importing legacy carpool data...',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Container(
                       width: double.infinity,
@@ -335,10 +393,10 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                       )
                     else
                       ...entries.map((entry) {
-                        final isPetrol = entry.type == CarpoolEntryType.petrol;
-                        final amountColor = isPetrol
-                            ? AppColors.primaryGreen
-                            : const Color(0xFFf87171);
+                        final isFees = _isFeesExpense(entry);
+                        final amountColor = isFees
+                            ? const Color(0xFFf87171)
+                            : AppColors.primaryGreen;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
@@ -359,9 +417,9 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
-                                  isPetrol
-                                      ? Icons.local_gas_station_outlined
-                                      : Icons.money_off_csred_outlined,
+                                  isFees
+                                      ? Icons.money_off_csred_outlined
+                                      : Icons.local_gas_station_outlined,
                                   color: amountColor,
                                   size: 20,
                                 ),
@@ -391,7 +449,7 @@ class _CarpoolScreenState extends State<CarpoolScreen> {
                                 ),
                               ),
                               Text(
-                                '${isPetrol ? '+' : '-'}₹${entry.amount.toStringAsFixed(2)}',
+                                '${isFees ? '-' : '+'}₹${entry.amount.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   color: amountColor,
                                   fontSize: 15,

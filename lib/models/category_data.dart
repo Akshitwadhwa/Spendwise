@@ -7,6 +7,7 @@ class CategoryData {
   final IconData icon;
   final Color color;
   final List<TagOption> tags;
+  final bool isSpecial;
 
   const CategoryData({
     required this.id,
@@ -14,6 +15,7 @@ class CategoryData {
     required this.icon,
     required this.color,
     required this.tags,
+    this.isSpecial = false,
   });
 
   static Map<String, CategoryData> categories = {
@@ -65,6 +67,19 @@ class CategoryData {
         TagOption(label: 'Music', icon: Icons.library_music),
       ],
     ),
+    'Carpool': const CategoryData(
+      id: 'Carpool',
+      label: 'Carpool',
+      icon: Icons.directions_car_outlined,
+      color: AppColors.accentTeal,
+      isSpecial: true,
+      tags: [
+        TagOption(label: 'Petrol', icon: Icons.local_gas_station_outlined),
+        TagOption(label: 'Fees', icon: Icons.payments_outlined),
+        TagOption(label: 'Toll', icon: Icons.toll_outlined),
+        TagOption(label: 'Parking', icon: Icons.local_parking_outlined),
+      ],
+    ),
   };
 }
 
@@ -84,6 +99,7 @@ class Expense {
   final String description;
   final String date;
   final String category;
+  final String? carpoolType;
 
   const Expense({
     required this.id,
@@ -91,5 +107,6 @@ class Expense {
     required this.description,
     required this.date,
     required this.category,
+    this.carpoolType,
   });
 }

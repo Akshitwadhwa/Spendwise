@@ -25,6 +25,18 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   _BalanceView _balanceView = _BalanceView.all;
 
+  @override
+  void initState() {
+    super.initState();
+    _migrateLegacyCarpoolData();
+  }
+
+  Future<void> _migrateLegacyCarpoolData() async {
+    try {
+      await DatabaseService.migrateLegacyCarpoolDataToCategoryExpenses();
+    } catch (_) {}
+  }
+
   void _addCustomCategory(CategoryData category) {
     DatabaseService.addCategory(category);
     CategoryData.categories[category.id] = category;
@@ -792,6 +804,12 @@ class _WalletScreenState extends State<WalletScreen> {
                             icon: Icons.spa_outlined,
                             color: AppColors.lifestylePurple,
                             amount: categoryTotals['Lifestyle'],
+                          ),
+                          CategoryCard(
+                            title: 'Carpool',
+                            icon: Icons.directions_car_outlined,
+                            color: AppColors.accentTeal,
+                            amount: categoryTotals['Carpool'],
                           ),
                           ...customCategories.map((category) => CategoryCard(
                                 title: category.label,

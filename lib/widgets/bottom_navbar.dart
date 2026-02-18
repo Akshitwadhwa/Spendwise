@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
-enum TabType { home, recent, stats, carpool }
+enum TabType { home, recent, stats }
 
 class BottomNavbar extends StatelessWidget {
   final TabType activeTab;
@@ -16,15 +16,21 @@ class BottomNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      const _TabItem(id: TabType.home, icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
-      const _TabItem(id: TabType.recent, icon: Icons.history, activeIcon: Icons.history, label: 'Recent'),
-      const _TabItem(id: TabType.stats, icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: 'Stats'),
       const _TabItem(
-        id: TabType.carpool,
-        icon: Icons.directions_car_outlined,
-        activeIcon: Icons.directions_car,
-        label: 'Carpool',
-      ),
+          id: TabType.home,
+          icon: Icons.home_outlined,
+          activeIcon: Icons.home,
+          label: 'Home'),
+      const _TabItem(
+          id: TabType.recent,
+          icon: Icons.history,
+          activeIcon: Icons.history,
+          label: 'Recent'),
+      const _TabItem(
+          id: TabType.stats,
+          icon: Icons.bar_chart_outlined,
+          activeIcon: Icons.bar_chart,
+          label: 'Stats'),
     ];
 
     return Positioned(
@@ -65,8 +71,8 @@ class BottomNavbar extends StatelessWidget {
                       curve: Curves.easeOut,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: isActive 
-                            ? Colors.white.withValues(alpha: 0.1) 
+                        color: isActive
+                            ? Colors.white.withValues(alpha: 0.1)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -82,8 +88,8 @@ class BottomNavbar extends StatelessWidget {
                                 child: Icon(
                                   isActive ? tab.activeIcon : tab.icon,
                                   size: 24,
-                                  color: isActive 
-                                      ? const Color(0xFF34d399) 
+                                  color: isActive
+                                      ? const Color(0xFF34d399)
                                       : const Color(0xFF94a3b8),
                                 ),
                               ),
@@ -93,8 +99,8 @@ class BottomNavbar extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
-                                  color: isActive 
-                                      ? Colors.white 
+                                  color: isActive
+                                      ? Colors.white
                                       : const Color(0xFF64748b),
                                 ),
                                 child: Text(tab.label),
@@ -113,7 +119,8 @@ class BottomNavbar extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF34d399).withValues(alpha: 0.8),
+                                      color: const Color(0xFF34d399)
+                                          .withValues(alpha: 0.8),
                                       blurRadius: 8,
                                       spreadRadius: 0,
                                     ),

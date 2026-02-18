@@ -40,13 +40,18 @@ class DatabaseService {
   /// Add a new expense
   static Future<String> addExpense(Expense expense) async {
     final userId = _requireUserId();
-    final docRef = await _expensesCollection(userId).add({
+    final payload = <String, dynamic>{
       'amount': expense.amount,
       'description': expense.description,
       'date': expense.date,
       'category': expense.category,
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    };
+    if (expense.carpoolType != null) {
+      payload['carpoolType'] = expense.carpoolType;
+    }
+
+    final docRef = await _expensesCollection(userId).add(payload);
     return docRef.id;
   }
 
@@ -68,6 +73,7 @@ class DatabaseService {
                 description: data['description'] ?? '',
                 date: data['date'] ?? '',
                 category: data['category'] ?? '',
+                carpoolType: data['carpoolType'] as String?,
               );
             }).toList());
   }
@@ -83,27 +89,63 @@ class DatabaseService {
         .where('category', isEqualTo: categoryId)
         .snapshots()
         .map((snapshot) {
-          final docs = [...snapshot.docs];
-          docs.sort((a, b) {
-            final aTime = a.data()['createdAt'] as Timestamp?;
-            final bTime = b.data()['createdAt'] as Timestamp?;
-            if (aTime == null && bTime == null) return 0;
-            if (aTime == null) return 1;
-            if (bTime == null) return -1;
-            return bTime.compareTo(aTime);
-          });
+      final docs = [...snapshot.docs];
+      docs.sort((a, b) {
+        final aTime = a.data()['createdAt'] as Timestamp?;
+        final bTime = b.data()['createdAt'] as Timestamp?;
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return bTime.compareTo(aTime);
+      });
 
-          return docs.take(5).map((doc) {
-            final data = doc.data();
-            return Expense(
-              id: doc.id,
-              amount: (data['amount'] as num).toDouble(),
-              description: data['description'] ?? '',
-              date: data['date'] ?? '',
-              category: data['category'] ?? '',
-            );
-          }).toList();
-        });
+      return docs.take(5).map((doc) {
+        final data = doc.data();
+        return Expense(
+          id: doc.id,
+          amount: (data['amount'] as num).toDouble(),
+          description: data['description'] ?? '',
+          date: data['date'] ?? '',
+          category: data['category'] ?? '',
+          carpoolType: data['carpoolType'] as String?,
+        );
+      }).toList();
+    });
+  }
+
+  /// Get all expenses by category (no limit)
+  static Stream<List<Expense>> getAllExpensesByCategory(String categoryId) {
+    final userId = _currentUserId;
+    if (userId == null) {
+      return Stream.value(const []);
+    }
+
+    return _expensesCollection(userId)
+        .where('category', isEqualTo: categoryId)
+        .snapshots()
+        .map((snapshot) {
+      final docs = [...snapshot.docs];
+      docs.sort((a, b) {
+        final aTime = a.data()['createdAt'] as Timestamp?;
+        final bTime = b.data()['createdAt'] as Timestamp?;
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return bTime.compareTo(aTime);
+      });
+
+      return docs.map((doc) {
+        final data = doc.data();
+        return Expense(
+          id: doc.id,
+          amount: (data['amount'] as num).toDouble(),
+          description: data['description'] ?? '',
+          date: data['date'] ?? '',
+          category: data['category'] ?? '',
+          carpoolType: data['carpoolType'] as String?,
+        );
+      }).toList();
+    });
   }
 
   /// Update an expense
@@ -114,6 +156,7 @@ class DatabaseService {
       'description': expense.description,
       'date': expense.date,
       'category': expense.category,
+      'carpoolType': expense.carpoolType ?? FieldValue.delete(),
     });
   }
 
@@ -184,7 +227,8 @@ class DatabaseService {
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
               final data = doc.data();
-              final rawType = (data['type'] as String? ?? 'petrol').toLowerCase();
+              final rawType =
+                  (data['type'] as String? ?? 'petrol').toLowerCase();
               final type = rawType == 'fees'
                   ? CarpoolEntryType.fees
                   : CarpoolEntryType.petrol;
@@ -211,6 +255,80 @@ class DatabaseService {
       }
       return total;
     });
+  }
+
+  /// One-time import from legacy `carpoolEntries` into `expenses` with category `Carpool`.
+  static Future<int> migrateLegacyCarpoolDataToCategoryExpenses() async {
+    final userId = _requireUserId();
+    final userDoc = _db.collection('users').doc(userId);
+    final userSnapshot = await userDoc.get();
+    final userData = userSnapshot.data() ?? const <String, dynamic>{};
+
+    if (userData['carpoolMigratedToCategoryExpenses'] == true) {
+      return 0;
+    }
+
+    final legacyEntries = await _carpoolCollection(userId).get();
+    if (legacyEntries.docs.isEmpty) {
+      await userDoc.set({
+        'carpoolMigratedToCategoryExpenses': true,
+        'carpoolMigrationCompletedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return 0;
+    }
+
+    var importedCount = 0;
+    var pendingWrites = 0;
+    WriteBatch batch = _db.batch();
+
+    for (final doc in legacyEntries.docs) {
+      final data = doc.data();
+      final rawType = (data['type'] as String? ?? 'petrol').toLowerCase();
+      final type = rawType == 'fees' ? 'fees' : 'petrol';
+      final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+      final rawDescription = (data['description'] as String? ?? '').trim();
+      final description = rawDescription.isNotEmpty
+          ? rawDescription
+          : (type == 'fees' ? 'Fees' : 'Petrol charge');
+
+      final createdAt = data['createdAt'];
+      final createdAtValue =
+          createdAt is Timestamp ? createdAt : FieldValue.serverTimestamp();
+
+      final expenseRef = _expensesCollection(userId).doc('carpool_${doc.id}');
+      batch.set(
+          expenseRef,
+          {
+            'amount': amount,
+            'description': description,
+            'date': data['date'] ?? '',
+            'category': 'Carpool',
+            'carpoolType': type,
+            'createdAt': createdAtValue,
+            'migratedFromLegacyCarpool': true,
+          },
+          SetOptions(merge: true));
+
+      importedCount += 1;
+      pendingWrites += 1;
+
+      if (pendingWrites >= 400) {
+        await batch.commit();
+        batch = _db.batch();
+        pendingWrites = 0;
+      }
+    }
+
+    batch.set(
+        userDoc,
+        {
+          'carpoolMigratedToCategoryExpenses': true,
+          'carpoolMigrationCompletedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true));
+    await batch.commit();
+
+    return importedCount;
   }
 
   // ==================== CATEGORIES ====================
