@@ -15,6 +15,7 @@ class RecentScreen extends StatefulWidget {
 
 class _RecentScreenState extends State<RecentScreen> {
   String _selectedDateFilter = 'All';
+  String _selectedCategory = 'All';
 
   List<Expense> _filterExpensesByDate(List<Expense> expenses) {
     if (_selectedDateFilter == 'All') {
@@ -196,6 +197,93 @@ class _RecentScreenState extends State<RecentScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+
+              // Category Filter Dropdown
+              StreamBuilder<List<Expense>>(
+                stream: DatabaseService.getExpenses(),
+                builder: (context, snapshot) {
+                  final expenses = snapshot.data ?? [];
+                  final categoryNames = expenses
+                      .map((e) => e.category)
+                      .toSet()
+                      .toList()
+                    ..sort();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1e293b),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _selectedCategory != 'All'
+                            ? const Color(0xFF10b981).withOpacity(0.5)
+                            : Colors.white.withOpacity(0.08),
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedCategory,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1e293b),
+                        icon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: _selectedCategory != 'All'
+                              ? const Color(0xFF10b981)
+                              : Colors.grey[500],
+                        ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        hint: const Text(
+                          'Filter by category',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: 'All',
+                            child: Row(
+                              children: [
+                                Icon(Icons.all_inclusive, size: 18, color: Colors.grey),
+                                SizedBox(width: 10),
+                                Text('All Categories',
+                                    style: TextStyle(color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                          ...categoryNames.map((cat) {
+                            final catData = CategoryData.categories[cat];
+                            return DropdownMenuItem(
+                              value: cat,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    catData?.icon ?? Icons.category_outlined,
+                                    size: 18,
+                                    color: catData?.color ?? Colors.grey,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(cat,
+                                      style: const TextStyle(
+                                          color: Colors.white)),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedCategory = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 16),
 
               // Transactions List
@@ -212,7 +300,12 @@ class _RecentScreenState extends State<RecentScreen> {
                     }
 
                     final allExpenses = snapshot.data ?? [];
-                    final filteredExpenses = _filterExpensesByDate(allExpenses);
+                    var filteredExpenses = _filterExpensesByDate(allExpenses);
+                    if (_selectedCategory != 'All') {
+                      filteredExpenses = filteredExpenses
+                          .where((e) => e.category == _selectedCategory)
+                          .toList();
+                    }
 
                     if (filteredExpenses.isEmpty) {
                       return Center(
