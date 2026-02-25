@@ -125,14 +125,20 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   void _showBalanceSplitPopup(BuildContext context) {
+    final isMonthView = _balanceView == _BalanceView.month;
     showDialog(
       context: context,
       builder: (context) => StreamBuilder<List<Expense>>(
         stream: DatabaseService.getExpenses(),
         builder: (context, snapshot) {
           final expenses = snapshot.data ?? [];
-          final totalSpendExpenses =
+          var totalSpendExpenses =
               expenses.where((expense) => !_isCarpoolExpense(expense)).toList();
+          if (isMonthView) {
+            totalSpendExpenses = totalSpendExpenses
+                .where(_isExpenseInCurrentMonth)
+                .toList();
+          }
 
           final Map<String, double> categoryTotals = {};
           double grandTotal = 0;
@@ -162,9 +168,9 @@ class _WalletScreenState extends State<WalletScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Spending Split',
-                        style: TextStyle(
+                      Text(
+                        isMonthView ? 'This Month\'s Split' : 'Spending Split',
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -206,7 +212,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     child: Column(
                       children: [
                         Text(
-                          'Total Spending',
+                          isMonthView ? 'This Month\'s Spending' : 'Total Spending',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[400],
