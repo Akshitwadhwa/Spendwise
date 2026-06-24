@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import 'carpool_screen.dart';
+import '../widgets/profile_menu_item.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,6 +18,81 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _exportRecords() async {
+    try {
+      final expenses = await DatabaseService.getExpenses().first;
+
+      if (expenses.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No records available to export.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final excel = Excel.createExcel();
+      excel.rename('Sheet1', 'Records');
+      final sheet = excel['Records'];
+
+      sheet.appendRow([
+        TextCellValue('Date'),
+        TextCellValue('Category'),
+        TextCellValue('Description'),
+        TextCellValue('Amount'),
+        TextCellValue('Carpool Type'),
+      ]);
+
+      for (final expense in expenses) {
+        sheet.appendRow([
+          TextCellValue(expense.date),
+          TextCellValue(expense.category),
+          TextCellValue(expense.description),
+          DoubleCellValue(expense.amount),
+          TextCellValue(expense.carpoolType ?? ''),
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) {
+        throw StateError('Failed to generate Excel file.');
+      }
+
+      final fileName =
+          'spendwise_records_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+      final file = XFile.fromData(
+        Uint8List.fromList(bytes),
+        name: fileName,
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+
+      await Share.shareXFiles(
+        [file],
+        subject: 'SpendWise records export',
+        text: 'Your SpendWise transaction records are ready to share.',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export prepared successfully.'),
+          backgroundColor: Color(0xFF10b981),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not export records right now.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   String _maskUid(String uid) {
     if (uid.length <= 8) {
       return '*' * uid.length;
@@ -353,6 +433,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                 },
+              ),
+              ProfileMenuItem(
+                icon: Icons.file_download_outlined,
+                iconColor: const Color(0xFF10b981),
+                title: 'Export Records',
+                isSpecial: true,
+                onTap: _exportRecords,
               ),
               _buildMenuItem(
                 icon: Icons.badge_outlined,
