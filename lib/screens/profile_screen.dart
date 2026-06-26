@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../models/category_data.dart';
 import 'carpool_screen.dart';
 import '../widgets/profile_menu_item.dart';
 
@@ -33,6 +34,220 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
+      // Show filter dialog
+      if (!mounted) return;
+      await _showExportFilterDialog(expenses);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not export records right now.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showExportFilterDialog(List<Expense> allExpenses) async {
+    String selectedCategory = 'All';
+    String selectedTimeline = 'All';
+
+    // Get unique categories
+    final Set<String> categories = {'All'};
+    for (final expense in allExpenses) {
+      categories.add(expense.category);
+    }
+    final timelineOptions = ['All', 'Last 7 days', 'Last 30 days', 'Last 3 months'];
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1e293b),
+              title: const Text(
+                'Filter Records',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category Filter
+                    Text(
+                      'Category',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: DropdownButton<String>(
+                        value: selectedCategory,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1e293b),
+                        underline: const SizedBox(),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        items: categories.map<DropdownMenuItem<String>>((String category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(
+                              category,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() {
+                              selectedCategory = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Timeline Filter
+                    Text(
+                      'Timeline',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: DropdownButton<String>(
+                        value: selectedTimeline,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1e293b),
+                        underline: const SizedBox(),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        items: timelineOptions.map((timeline) {
+                          return DropdownMenuItem(
+                            value: timeline,
+                            child: Text(
+                              timeline,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() {
+                              selectedTimeline = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Color(0xFF94a3b8)),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _exportFilteredRecords(allExpenses, selectedCategory, selectedTimeline);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10b981),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Export'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _exportFilteredRecords(
+    List<Expense> allExpenses,
+    String selectedCategory,
+    String selectedTimeline,
+  ) async {
+    try {
+      // Filter by category
+      var filteredExpenses = allExpenses.cast<Expense>();
+      if (selectedCategory != 'All') {
+        filteredExpenses = filteredExpenses
+            .where((expense) => expense.category == selectedCategory)
+            .toList();
+      }
+
+      // Filter by timeline
+      if (selectedTimeline != 'All') {
+        final now = DateTime.now();
+        DateTime startDate;
+
+        switch (selectedTimeline) {
+          case 'Last 7 days':
+            startDate = now.subtract(const Duration(days: 7));
+            break;
+          case 'Last 30 days':
+            startDate = now.subtract(const Duration(days: 30));
+            break;
+          case 'Last 3 months':
+            startDate = now.subtract(const Duration(days: 90));
+            break;
+          default:
+            startDate = DateTime(2000);
+        }
+
+        filteredExpenses = filteredExpenses.where((expense) {
+          try {
+            final expenseDate = DateFormat('dd/MM/yyyy').parse(expense.date);
+            return expenseDate.isAfter(startDate) ||
+                expenseDate.isAtSameMomentAs(startDate);
+          } catch (e) {
+            return true;
+          }
+        }).toList();
+      }
+
+      if (filteredExpenses.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No records match the selected filters.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
       final excel = Excel.createExcel();
       excel.rename('Sheet1', 'Records');
       final sheet = excel['Records'];
@@ -44,7 +259,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         TextCellValue('Amount'),
       ]);
 
-      for (final expense in expenses) {
+      for (final expense in filteredExpenses) {
         sheet.appendRow([
           TextCellValue(expense.date),
           TextCellValue(expense.category),
