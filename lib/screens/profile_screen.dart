@@ -42,7 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         TextCellValue('Category'),
         TextCellValue('Description'),
         TextCellValue('Amount'),
-        TextCellValue('Carpool Type'),
       ]);
 
       for (final expense in expenses) {
@@ -51,7 +50,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextCellValue(expense.category),
           TextCellValue(expense.description),
           DoubleCellValue(expense.amount),
-          TextCellValue(expense.carpoolType ?? ''),
         ]);
       }
 
